@@ -80,12 +80,13 @@ node3 = Node()
 node4 = Node()
 node5 = Node()
 
-path1 = Path(node1, node2)
-path2 = Path(node1, node4)
-path3 = Path(node2, node3)
-path4 = Path(node2, node5)
-path5 = Path(node4, node3)
-path6 = Path(node4, node5)
+path1 = Path(node1, node2, 10)
+path2 = Path(node1, node4, 7)
+path3 = Path(node2, node3, 6)
+path4 = Path(node2, node5, 5)
+path5 = Path(node4, node3, 4 + 5)
+path6 = Path(node4, node5, 9)
+path7 = Path(node3, node5, 8)
 
 def main():
     ...
