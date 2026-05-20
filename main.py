@@ -18,6 +18,7 @@ class Path:
     _id: int = 0
     _self_map = {}
     _path = []
+    _path_maps = []
 
     def __init__(self, node1: Node, node2: Node, distance: int = 0) -> None:
         ...
@@ -27,16 +28,46 @@ class Path:
 
         path = [node1._id, node2._id]
 
-        Path._self_map[Path._id] = {
-            "id": Path._id,
-            "path": path,
-            "distance": distance
-        }
+        # Path._self_map[Path._id] = {
+        #     "id": Path._id,
+        #     "path": path,
+        #     "distance": distance
+        # }
+
+        # Path._path_maps
 
         self._path = path
         self.distance = distance
 
-        # Path._self_map[Path._id] = self
+        # print(f"{Path._id = }")
+        Path._self_map[Path._id] = self
+
+    @classmethod
+    def get_sorted_paths(cls):
+        return sorted(
+            cls._self_map.values(),
+            key=lambda path: path.distance
+        )
+
+    @classmethod 
+    def getSortedPathMaps(self, isConvertDataToDict: bool | int = True):
+        ...
+
+        _res = []
+
+        for id, path in Path._self_map.items():
+            ...
+            # print(f"{id}: {path._id}")
+            d = [path.distance, (path.__dict__, path)[not not isConvertDataToDict]]
+            # print(path.__dict__)
+            # print("d: " + json.dumps(path.__dict__, indent=4))
+            
+            _res.append(d)
+
+        return _res
+        return _res.sort(key=lambda x: x[1]._id)
+
+        # return res
 
     @classmethod
     def getPathAndDistanceFromNodeOrNodeId(self, nodeOrNodeId: Node | int):
@@ -92,11 +123,25 @@ def main():
     ...
     print("hello world\n\n")
 
-    print(json.dumps(Path._self_map, indent=4))
+    # sortedPathMap = Path.getSortedPathMaps()
+    sortedPathMap = Path.get_sorted_paths()
 
-    path1BelongsTo = Path.getPathAndDistanceFromNodeOrNodeId(node1)
+    for path in sortedPathMap:
+        ...
+        print(path.__dict__)
 
-    print("\n\n\npath1BelongsTo = " + json.dumps(path1BelongsTo, indent=4))
+    
+    # print(sortedPathMap[0].__dict__)
+    # print(json.dumps(Path.get_sorted_paths(), indent=4))
+
+    # print(Path._self_map[1])
+    # print(json.dumps(Node._self_map, indent=4))
+    # print(json.dumps(Path._self_map[1].__dict__, indent=4))
+    # print(json.dumps(Path._self_map, indent=4))
+
+    # path1BelongsTo = Path.getPathAndDistanceFromNodeOrNodeId(node1)
+
+    # print("\n\n\npath1BelongsTo = " + json.dumps(path1BelongsTo, indent=4))
 
 if __name__ == "__main__":
     main()
