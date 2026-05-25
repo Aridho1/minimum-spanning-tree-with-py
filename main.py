@@ -7,39 +7,23 @@ class Node:
     _self_map = {}
 
     def __init__(self) -> None:
-        ...
-
         Node._id += 1
         self._id = Node._id
 
         Node._self_map[Node._id] = self
 
+
 class Path:
     _id: int = 0
     _self_map = {}
-    _path = []
-    _path_maps = []
 
     def __init__(self, node1: Node, node2: Node, distance: int = 0) -> None:
-        ...
-
         Path._id += 1
         self._id = Path._id
 
-        path = [node1._id, node2._id]
-
-        # Path._self_map[Path._id] = {
-        #     "id": Path._id,
-        #     "path": path,
-        #     "distance": distance
-        # }
-
-        # Path._path_maps
-
-        self._path = path
+        self._path = [node1._id, node2._id]
         self.distance = distance
 
-        # print(f"{Path._id = }")
         Path._self_map[Path._id] = self
 
     @classmethod
@@ -49,61 +33,48 @@ class Path:
             key=lambda path: path.distance
         )
 
-    @classmethod 
-    def getSortedPathMaps(self, isConvertDataToDict: bool | int = True):
-        ...
+    @classmethod
+    def getSortedPathMaps(cls, isConvertDataToDict: bool = True):
+        result = []
 
-        _res = []
+        for path in cls._self_map.values():
+            data = (
+                path.__dict__
+                if isConvertDataToDict
+                else path
+            )
 
-        for id, path in Path._self_map.items():
-            ...
-            # print(f"{id}: {path._id}")
-            d = [path.distance, (path.__dict__, path)[not not isConvertDataToDict]]
-            # print(path.__dict__)
-            # print("d: " + json.dumps(path.__dict__, indent=4))
-            
-            _res.append(d)
+            result.append([path.distance, data])
 
-        return _res
-        return _res.sort(key=lambda x: x[1]._id)
-
-        # return res
+        return result
 
     @classmethod
-    def getPathAndDistanceFromNodeOrNodeId(self, nodeOrNodeId: Node | int):
-        ...
-        
+    def getPathAndDistanceFromNodeOrNodeId(cls, nodeOrNodeId: Node | int):
+
         if isinstance(nodeOrNodeId, Node):
             node = nodeOrNodeId
+
         elif isinstance(nodeOrNodeId, int):
-            try:
-                node = Node._self_map.get(id)
-            except KeyError as err:
-                raise ValueError("Data Tidak Valid karena 'node id' tidak valid")
+            node = Node._self_map.get(nodeOrNodeId)
+
+            if node is None:
+                raise ValueError("Node ID tidak valid")
+
         else:
             raise TypeError("Input harus berupa objek Node atau Integer ID")
 
-        res = []
-        print(f"{node._id = }")
+        result = []
 
-        for key, path in Path._self_map.items():
-            ...
-            print(f"{path = }")
-            if not isinstance(path, dict):
-                # print(f"{path} itu bukan dict")
-                continue
-            
-            if "id" not in path or "path" not in path or "distance" not in path:
-                # print(f"node id {node._id} is not found in {path["path"]}")
-                continue
-            
-            if node._id in path["path"]:
-                res.append(path)
-            else:
-                ...
-                # print(f"node id {node._id} is not found in {path["path"]}")
-        
-        return res
+        for path in cls._self_map.values():
+            if node._id in path._path:
+                result.append({
+                    "id": path._id,
+                    "path": path._path,
+                    "distance": path.distance
+                })
+
+        return result
+
 
 node1 = Node()
 node2 = Node()
@@ -115,33 +86,87 @@ path1 = Path(node1, node2, 10)
 path2 = Path(node1, node4, 7)
 path3 = Path(node2, node3, 6)
 path4 = Path(node2, node5, 5)
-path5 = Path(node4, node3, 4 + 5)
+path5 = Path(node4, node3, 9)
 path6 = Path(node4, node5, 9)
 path7 = Path(node3, node5, 8)
 
+
+def kruskal():
+    parent = {}
+
+    for node_id in Node._self_map:
+        parent[node_id] = node_id
+
+    def find(node):
+        while parent[node] != node:
+            node = parent[node]
+        return node
+
+    def union(node1, node2):
+        root1 = find(node1)
+        root2 = find(node2)
+
+        if root1 != root2:
+            parent[root2] = root1
+            return True
+
+        return False
+
+    mst = []
+    total_distance = 0
+
+    sorted_paths = Path.get_sorted_paths()
+
+    print("\n=== PROSES ALGORITMA KRUSKAL ===\n")
+
+    for path in sorted_paths:
+        node1 = path._path[0]
+        node2 = path._path[1]
+
+        print(
+            f"Memeriksa jalur "
+            f"{node1} <--> {node2} "
+            f"dengan jarak {path.distance}"
+        )
+
+        if union(node1, node2):
+            mst.append(path)
+            total_distance += path.distance
+
+            print("Jalur ditambahkan ke MST\n")
+
+        else:
+            print("Jalur ditolak karena membentuk cycle\n")
+
+    print("\n=== HASIL MINIMUM SPANNING TREE ===\n")
+
+    for path in mst:
+        print(
+            f"Node {path._path[0]} "
+            f"<--> Node {path._path[1]} "
+            f"= {path.distance}"
+        )
+
+    print(f"\nTotal Minimum Distance = {total_distance}")
+
+
 def main():
-    ...
-    print("hello world\n\n")
+    print("PROJECT MST")
+    print("Pemasangan Kabel Internet Antar Daerah")
 
-    # sortedPathMap = Path.getSortedPathMaps()
-    sortedPathMap = Path.get_sorted_paths()
+    print("\n=== DAFTAR SEMUA JALUR ===\n")
 
-    for path in sortedPathMap:
-        ...
-        print(path.__dict__)
+    sorted_paths = Path.get_sorted_paths()
 
-    
-    # print(sortedPathMap[0].__dict__)
-    # print(json.dumps(Path.get_sorted_paths(), indent=4))
+    for path in sorted_paths:
+        print(
+            f"Node {path._path[0]} "
+            f"<--> Node {path._path[1]} "
+            f"= {path.distance}"
+        )
 
-    # print(Path._self_map[1])
-    # print(json.dumps(Node._self_map, indent=4))
-    # print(json.dumps(Path._self_map[1].__dict__, indent=4))
-    # print(json.dumps(Path._self_map, indent=4))
+    kruskal()
 
-    # path1BelongsTo = Path.getPathAndDistanceFromNodeOrNodeId(node1)
-
-    # print("\n\n\npath1BelongsTo = " + json.dumps(path1BelongsTo, indent=4))
 
 if __name__ == "__main__":
     main()
