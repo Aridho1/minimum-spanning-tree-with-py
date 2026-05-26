@@ -129,7 +129,7 @@ def input_custom_data():
         ...
         print(
             ("", f"[{label}]")[not not label],
-            f"'{_from}' berhasil diubah menjadi '{_to}'" if _from != _to else f"{_to} Sudah digunakan"
+            f"'{_from}' berhasil diubah menjadi '{_to}'" if _from != _to else f"'{_to}' Sudah digunakan"
         )
 
     def show_help():
