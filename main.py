@@ -44,7 +44,7 @@ path1 = Path(node1, node2, 10)
 path2 = Path(node1, node4, 7)
 path3 = Path(node2, node3, 6)
 path4 = Path(node2, node5, 5)
-path5 = Path(node4, node3, 4)
+path5 = Path(node4, node3, 9)
 path6 = Path(node4, node5, 9)
 path7 = Path(node3, node5, 8)
 
@@ -110,6 +110,7 @@ def kruskal():
 
 
 def draw_graph(mst_paths):
+    plt.figure()
     G = nx.Graph()
 
     # Tambahkan semua node
@@ -143,23 +144,108 @@ def draw_graph(mst_paths):
         edge_labels=labels
     )
 
-    # Highlight MST
+    plt.title("Minimum Spanning Tree - Kabel Internet Antar Daerah")
+    # plt.show()
+
+def draw_graph2(mst_paths):
+    plt.figure()
+    G = nx.Graph()
+
+    # Tambahkan semua node
+    for node_id in Node._self_map:
+        G.add_node(node_id)
+
+    # Tambahkan semua edge
+    for path in Path._self_map.values():
+        node1 = path._path[0]
+        node2 = path._path[1]
+
+        G.add_edge(
+            node1,
+            node2,
+            weight=path.distance
+        )
+
+    pos = nx.spring_layout(G)
+
+    # =========================
+    # Ambil edge MST
+    # =========================
     mst_edges = []
 
     for path in mst_paths:
-        mst_edges.append((path._path[0], path._path[1]))
+        mst_edges.append(
+            (path._path[0], path._path[1])
+        )
 
+    # =========================
+    # Ambil edge NON-MST
+    # =========================
+    non_mst_edges = []
+
+    for path in Path._self_map.values():
+        edge = (path._path[0], path._path[1])
+
+        if edge not in mst_edges:
+            non_mst_edges.append(edge)
+
+    # =========================
+    # Gambar node
+    # =========================
+    nx.draw_networkx_nodes(
+        G,
+        pos,
+        node_size=2000
+    )
+
+    nx.draw_networkx_labels(
+        G,
+        pos,
+        font_size=12
+    )
+
+    # =========================
+    # Edge NON-MST (dashed)
+    # =========================
+    nx.draw_networkx_edges(
+        G,
+        pos,
+        edgelist=non_mst_edges,
+        style="dashed",
+        edge_color="gray",
+        width=1
+    )
+
+    # =========================
+    # Edge MST (normal)
+    # =========================
     nx.draw_networkx_edges(
         G,
         pos,
         edgelist=mst_edges,
-        width=4
+        edge_color="black",
+        width=2
     )
 
-    plt.title("Minimum Spanning Tree - Kabel Internet Antar Daerah")
-    plt.show()
+    # =========================
+    # Label jarak
+    # =========================
+    labels = nx.get_edge_attributes(
+        G,
+        'weight'
+    )
 
+    nx.draw_networkx_edge_labels(
+        G,
+        pos,
+        edge_labels=labels
+    )
 
+    plt.title(
+        "Minimum Spanning Tree - Kabel Internet Antar Daerah"
+    )
+
+    # plt.show()
 
 def main():
     print("PROJECT MST")
@@ -176,8 +262,9 @@ def main():
 
     mst = kruskal()
 
-    draw_graph(mst)
-
+    # draw_graph(mst)
+    draw_graph2(mst)
+    plt.show()
 
 if __name__ == "__main__":
     main()
