@@ -153,6 +153,143 @@ def input_custom_data():
 
         for i in range(1, total_node + 1):
             for j in range(i + 1, total_node + 1):
+
+                edge = (i, j)
+
+                label1 = node_labels[i]
+                label2 = node_labels[j]
+
+                # =========================
+                # STATUS PATH
+                # =========================
+                is_available = edge not in used_paths
+
+                if is_available:
+
+                    statusOrDistance = (
+                        f"{COLORS['yellow']}"
+                        "AVAILABLE"
+                        f"{COLORS['reset']}"
+                    )
+
+                    nodeIndexColor = COLORS["blue"]
+                    nodeLabelColor = COLORS["cyan"]
+
+                else:
+
+                    distance = used_paths[edge]
+
+                    statusOrDistance = (
+                        f"{COLORS['green']}"
+                        f"{distance}"
+                        f"{COLORS['reset']}"
+                    )
+
+                    nodeIndexColor = COLORS["magenta"]
+                    nodeLabelColor = COLORS["cyan"]
+
+                # =========================
+                # FORMAT BARIS
+                # =========================
+                line = (
+                    f"{nodeIndexColor}"
+                    f"{i:{longestIndex}} "
+
+                    f"{nodeLabelColor}"
+                    f"{f'({label1})':{longestName+2}} "
+
+                    f"{COLORS['magenta']}"
+                    "<--> "
+
+                    f"{nodeIndexColor}"
+                    f"{j:{longestIndex}} "
+
+                    f"{nodeLabelColor}"
+                    f"{f'({label2})':{longestName+2}} "
+
+                    f"{COLORS['magenta']}"
+                    "= "
+
+                    f"{statusOrDistance}"
+                    f"{COLORS['reset']}"
+                )
+
+                print(line)
+
+        print(
+            # f"\n{COLORS['bold']}"
+            # f"{COLORS['cyan']}"
+            f"{COLORS['reset']}"
+            "==================================="
+        )
+
+        return
+        for i in range(1, total_node + 1):
+            for j in range(i + 1, total_node + 1):
+
+                edge = (i, j)
+
+                label1 = node_labels[i]
+                label2 = node_labels[j]
+
+                # =========================
+                # STATUS PATH
+                # =========================
+                is_available = edge not in used_paths
+
+                if is_available:
+
+                    statusOrDistance = (
+                        f"{COLORS['yellow']}"
+                        f"AVAILABLE"
+                        f"{COLORS['reset']}"
+                    )
+
+                    lineColor = COLORS["blue"]
+
+                else:
+
+                    distance = used_paths[edge]
+
+                    statusOrDistance = (
+                        f"{COLORS['green']}"
+                        f"{distance}"
+                        f"{COLORS['reset']}"
+                    )
+
+                    lineColor = COLORS["cyan"]
+
+                # =========================
+                # FORMAT BARIS
+                # =========================
+                line = (
+                    f"{lineColor}"
+                    f"{i:{longestIndex}} "
+                    f"{f'({label1})':{longestName+2}} "
+                    f"{COLORS['magenta']}"
+                    "<--> "
+                    f"{lineColor}"
+                    f"{j:{longestIndex}} "
+                    f"{f'({label2})':{longestName+2}} "
+                    f"{COLORS['magenta']}"
+                    "= "
+                    f"{statusOrDistance}"
+                    f"{COLORS['reset']}"
+                )
+
+                print(line)
+
+        print(
+            f"\n{COLORS['bold']}"
+            f"{COLORS['cyan']}"
+            "==================================="
+            f"{COLORS['reset']}"
+        )
+
+        return
+
+        for i in range(1, total_node + 1):
+            for j in range(i + 1, total_node + 1):
                 edge = (i, j)
                 label1, label2 = node_labels[i], node_labels[j]
 
