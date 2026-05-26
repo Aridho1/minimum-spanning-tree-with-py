@@ -4,6 +4,42 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
+COLORS = {
+    # reset & style
+    "reset": "\033[0m",
+    "resetcolor": "\033[0m",
+    "bold": "\033[1m",
+
+    # foreground colors
+    "red": "\033[31m",
+    "green": "\033[32m",
+    "yellow": "\033[33m",
+    "blue": "\033[34m",
+    "magenta": "\033[35m",
+    "cyan": "\033[36m",
+    "white": "\033[37m",
+
+    # background colors (standard)
+    "bg_black": "\033[40m",
+    "bg_red": "\033[41m",
+    "bg_green": "\033[42m",
+    "bg_yellow": "\033[43m",
+    "bg_blue": "\033[44m",
+    "bg_magenta": "\033[45m",
+    "bg_cyan": "\033[46m",
+    "bg_white": "\033[47m",
+
+    # background colors (bright)
+    "bg_bright_black": "\033[100m",
+    "bg_bright_red": "\033[101m",
+    "bg_bright_green": "\033[102m",
+    "bg_bright_yellow": "\033[103m",
+    "bg_bright_blue": "\033[104m",
+    "bg_bright_magenta": "\033[105m",
+    "bg_bright_cyan": "\033[106m",
+    "bg_bright_white": "\033[107m",
+}
+
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
@@ -75,6 +111,11 @@ def input_custom_data():
     node_labels = {i: f"Node {i}" for i in range(1, total_node + 1)}
     used_paths = {}
 
+    def get_longest_node_labels():
+        ...
+        return max(len(label) for label in node_labels.values())
+
+
     def maksimal_path():
         return total_node * (total_node - 1) // 2
 
@@ -105,20 +146,24 @@ def input_custom_data():
         print("\n===================================")
         print("LIST PATH")
         print("===================================")
+        longestName = get_longest_node_labels()
+        
+        # PERBAIKAN 1: Ambil panjang digit langsung dari total_node maksimal
+        longestIndex = len(str(total_node))
+
         for i in range(1, total_node + 1):
             for j in range(i + 1, total_node + 1):
                 edge = (i, j)
                 label1, label2 = node_labels[i], node_labels[j]
-                if edge in used_paths:
-                    print(
-                        f"{i} ({label1}) <--> {j} ({label2}) "
-                        f"= {used_paths[edge]}"
-                    )
-                else:
-                    print(
-                        f"{i} ({label1}) <--> {j} ({label2}) "
-                        f"= AVAILABLE"
-                    )
+
+                # Typo fix: "AVAILABLE" (huruf A kurang satu)
+                statusOrDistance = "AVAILABLE" if edge not in used_paths else used_paths[edge]
+
+                # PERBAIKAN 2: Berikan format rata kiri :{longestName+2} pada label kedua juga
+                print(
+                    f"{i:{longestIndex}} {f'({label1})':{longestName+2}} <--> "
+                    f"{j:{longestIndex}} {f'({label2})':{longestName+2}} = {statusOrDistance}"
+                )
 
     clear_screen()
     show_help()
