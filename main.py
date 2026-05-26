@@ -33,21 +33,55 @@ class Path:
             key=lambda path: path.distance
         )
 
+def reset_data():
+    Node._id = 0
+    Node._self_map = {}
 
-node1 = Node()
-node2 = Node()
-node3 = Node()
-node4 = Node()
-node5 = Node()
+    Path._id = 0
+    Path._self_map = {}
 
-path1 = Path(node1, node2, 10)
-path2 = Path(node1, node4, 7)
-path3 = Path(node2, node3, 6)
-path4 = Path(node2, node5, 5)
-path5 = Path(node4, node3, 9)
-path6 = Path(node4, node5, 9)
-path7 = Path(node3, node5, 8)
+def load_default_data():
+    node1 = Node()
+    node2 = Node()
+    node3 = Node()
+    node4 = Node()
+    node5 = Node()
 
+    Path(node1, node2, 10)
+    Path(node1, node4, 7)
+    Path(node2, node3, 6)
+    Path(node2, node5, 5)
+    Path(node4, node3, 9)
+    Path(node4, node5, 9)
+    Path(node3, node5, 8)
+
+def input_custom_data():
+    total_node = int(input("Jumlah node: "))
+
+    nodes = []
+
+    for i in range(total_node):
+        node = Node()
+        nodes.append(node)
+
+    total_path = int(input("Jumlah jalur: "))
+
+    print("\nFormat input:")
+    print("node1 node2 jarak")
+    print("Contoh: 1 2 10\n")
+
+    for i in range(total_path):
+        data = input(f"Jalur ke-{i+1}: ").split()
+
+        node1 = int(data[0])
+        node2 = int(data[1])
+        distance = int(data[2])
+
+        Path(
+            nodes[node1 - 1],
+            nodes[node2 - 1],
+            distance
+        )
 
 def kruskal():
     parent = {}
@@ -251,6 +285,18 @@ def main():
     print("PROJECT MST")
     print("Pemasangan Kabel Internet Antar Daerah")
 
+    print("\n1. Gunakan data default")
+    print("2. Input data sendiri")
+
+    choice = input("\nPilih: ")
+
+    reset_data()
+
+    if choice == "2":
+        input_custom_data()
+    else:
+        load_default_data()
+
     print("\n=== DAFTAR SEMUA JALUR ===\n")
 
     for path in Path.get_sorted_paths():
@@ -262,8 +308,8 @@ def main():
 
     mst = kruskal()
 
-    # draw_graph(mst)
     draw_graph2(mst)
+
     plt.show()
 
 if __name__ == "__main__":
