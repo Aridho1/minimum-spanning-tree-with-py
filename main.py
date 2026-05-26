@@ -1,30 +1,30 @@
-import json
-from platform import node
+import networkx as nx
+import matplotlib.pyplot as plt
 
 
 class Node:
-    _id: int = 0
+    _id = 0
     _self_map = {}
 
-    def __init__(self) -> None:
+    def __init__(self):
         Node._id += 1
         self._id = Node._id
 
-        Node._self_map[Node._id] = self
+        Node._self_map[self._id] = self
 
 
 class Path:
-    _id: int = 0
+    _id = 0
     _self_map = {}
 
-    def __init__(self, node1: Node, node2: Node, distance: int = 0) -> None:
+    def __init__(self, node1, node2, distance=0):
         Path._id += 1
         self._id = Path._id
 
         self._path = [node1._id, node2._id]
         self.distance = distance
 
-        Path._self_map[Path._id] = self
+        Path._self_map[self._id] = self
 
     @classmethod
     def get_sorted_paths(cls):
@@ -32,48 +32,6 @@ class Path:
             cls._self_map.values(),
             key=lambda path: path.distance
         )
-
-    @classmethod
-    def getSortedPathMaps(cls, isConvertDataToDict: bool = True):
-        result = []
-
-        for path in cls._self_map.values():
-            data = (
-                path.__dict__
-                if isConvertDataToDict
-                else path
-            )
-
-            result.append([path.distance, data])
-
-        return result
-
-    @classmethod
-    def getPathAndDistanceFromNodeOrNodeId(cls, nodeOrNodeId: Node | int):
-
-        if isinstance(nodeOrNodeId, Node):
-            node = nodeOrNodeId
-
-        elif isinstance(nodeOrNodeId, int):
-            node = Node._self_map.get(nodeOrNodeId)
-
-            if node is None:
-                raise ValueError("Node ID tidak valid")
-
-        else:
-            raise TypeError("Input harus berupa objek Node atau Integer ID")
-
-        result = []
-
-        for path in cls._self_map.values():
-            if node._id in path._path:
-                result.append({
-                    "id": path._id,
-                    "path": path._path,
-                    "distance": path.distance
-                })
-
-        return result
 
 
 node1 = Node()
@@ -117,15 +75,14 @@ def kruskal():
 
     sorted_paths = Path.get_sorted_paths()
 
-    print("\n=== PROSES ALGORITMA KRUSKAL ===\n")
+    print("\n=== PROSES KRUSKAL ===\n")
 
     for path in sorted_paths:
         node1 = path._path[0]
         node2 = path._path[1]
 
         print(
-            f"Memeriksa jalur "
-            f"{node1} <--> {node2} "
+            f"Memeriksa jalur {node1} <--> {node2} "
             f"dengan jarak {path.distance}"
         )
 
@@ -133,12 +90,12 @@ def kruskal():
             mst.append(path)
             total_distance += path.distance
 
-            print("Jalur ditambahkan ke MST\n")
+            print("Ditambahkan ke MST\n")
 
         else:
-            print("Jalur ditolak karena membentuk cycle\n")
+            print("Ditolak karena membentuk cycle\n")
 
-    print("\n=== HASIL MINIMUM SPANNING TREE ===\n")
+    print("\n=== HASIL MST ===\n")
 
     for path in mst:
         print(
@@ -149,6 +106,60 @@ def kruskal():
 
     print(f"\nTotal Minimum Distance = {total_distance}")
 
+    return mst
+
+
+def draw_graph(mst_paths):
+    G = nx.Graph()
+
+    # Tambahkan semua node
+    for node_id in Node._self_map:
+        G.add_node(node_id)
+
+    # Tambahkan semua edge
+    for path in Path._self_map.values():
+        node1 = path._path[0]
+        node2 = path._path[1]
+
+        G.add_edge(node1, node2, weight=path.distance)
+
+    pos = nx.spring_layout(G)
+
+    # Gambar semua node dan edge
+    nx.draw(
+        G,
+        pos,
+        with_labels=True,
+        node_size=2000,
+        font_size=12
+    )
+
+    # Label jarak
+    labels = nx.get_edge_attributes(G, 'weight')
+
+    nx.draw_networkx_edge_labels(
+        G,
+        pos,
+        edge_labels=labels
+    )
+
+    # Highlight MST
+    mst_edges = []
+
+    for path in mst_paths:
+        mst_edges.append((path._path[0], path._path[1]))
+
+    nx.draw_networkx_edges(
+        G,
+        pos,
+        edgelist=mst_edges,
+        width=4
+    )
+
+    plt.title("Minimum Spanning Tree - Kabel Internet Antar Daerah")
+    plt.show()
+
+
 
 def main():
     print("PROJECT MST")
@@ -156,16 +167,16 @@ def main():
 
     print("\n=== DAFTAR SEMUA JALUR ===\n")
 
-    sorted_paths = Path.get_sorted_paths()
-
-    for path in sorted_paths:
+    for path in Path.get_sorted_paths():
         print(
             f"Node {path._path[0]} "
             f"<--> Node {path._path[1]} "
             f"= {path.distance}"
         )
 
-    kruskal()
+    mst = kruskal()
+
+    draw_graph(mst)
 
 
 if __name__ == "__main__":
