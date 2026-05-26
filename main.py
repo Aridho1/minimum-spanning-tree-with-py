@@ -1,5 +1,11 @@
+import os
+
 import networkx as nx
 import matplotlib.pyplot as plt
+
+
+def clear_screen():
+    os.system("cls" if os.name == "nt" else "clear")
 
 
 class Node:
@@ -56,220 +62,143 @@ def load_default_data():
     Path(node3, node5, 8)
 
 def input_custom_data():
+    while True:
+        try:
+            total_node = int(input("Jumlah node (min 2): "))
+            if total_node >= 2:
+                break
+            print("Jumlah node minimal 2")
+        except ValueError:
+            print("Input harus angka")
 
-    # =========================
-    # INPUT JUMLAH NODE
-    # =========================
-    total_node = int(
-        input("Jumlah node (min 2): ")
-    )
-
-    while total_node < 2:
-        print("Jumlah node minimal 2")
-
-        total_node = int(
-            input("Jumlah node (min 2): ")
-        )
-
-    # =========================
-    # INPUT NAMA NODE
-    # =========================
-    print("\n===================================")
-    print("Input Nama Node")
-    print("===================================")
-
-    nodes = []
-    node_labels = {}
-
-    for i in range(total_node):
-
-        label = input(
-            f"Nama node {i + 1}: "
-        )
-
-        node = Node()
-
-        nodes.append(node)
-
-        node_labels[node._id] = label
-
-    # =========================
-    # TOTAL MAX PATH
-    # =========================
-    maksimal_path = (
-        total_node * (total_node - 1)
-    ) // 2
-
-    print("\n===================================")
-    print(f"Max path: {maksimal_path}")
-    print("===================================")
-
-    # =========================
-    # REGISTRY PATH
-    # =========================
+    nodes = [Node() for _ in range(total_node)]
+    node_labels = {i: f"Node {i}" for i in range(1, total_node + 1)}
     used_paths = {}
 
-    # =========================
-    # SHOW PATH FUNCTION
-    # =========================
-    def show_paths():
+    def maksimal_path():
+        return total_node * (total_node - 1) // 2
 
+    def minimal_path():
+        return total_node - 1
+
+    def show_help():
+        print("\n===================================")
+        print("BANTUAN / STATUS")
+        print("===================================")
+        print(f"Jumlah node      : {total_node}")
+        print(f"Max path         : {maksimal_path()}")
+        print(f"Minimal path     : {minimal_path()}")
+        print(f"Path terdaftar   : {len(used_paths)} / {maksimal_path()}")
+        print("\n--- Daftar Node ---")
+        for i in range(1, total_node + 1):
+            print(f"  {i}. {node_labels[i]}")
+        print("\n--- Perintah ---")
+        print("  help")
+        print("  clear")
+        print("  show")
+        print("  name <no> <nama>")
+        print("  add <node1> <node2> <distance>")
+        print("  done")
+        print("===================================")
+
+    def show_paths():
         print("\n===================================")
         print("LIST PATH")
         print("===================================")
-
         for i in range(1, total_node + 1):
             for j in range(i + 1, total_node + 1):
-
-                edge = tuple(sorted((i, j)))
-
-                node1_label = node_labels[i]
-                node2_label = node_labels[j]
-
+                edge = (i, j)
+                label1, label2 = node_labels[i], node_labels[j]
                 if edge in used_paths:
-
-                    distance = used_paths[edge]
-
                     print(
-                        f"{i} ({node1_label}) "
-                        f"<--> "
-                        f"{j} ({node2_label}) "
-                        f"= {distance}"
+                        f"{i} ({label1}) <--> {j} ({label2}) "
+                        f"= {used_paths[edge]}"
                     )
-
                 else:
-
                     print(
-                        f"{i} ({node1_label}) "
-                        f"<--> "
-                        f"{j} ({node2_label}) "
+                        f"{i} ({label1}) <--> {j} ({label2}) "
                         f"= AVAILABLE"
                     )
 
-    # =========================
-    # HELP
-    # =========================
-    print("\n===================================")
-    print("COMMAND")
-    print("===================================")
-    print("show")
-    print("add node1 node2 distance")
-    print("done")
-    print("===================================")
+    clear_screen()
+    show_help()
 
-    # =========================
-    # MAIN LOOP
-    # =========================
     while True:
+        parts = input("\nCommand: ").strip().split()
+        if not parts:
+            continue
 
-        cmd = input("\nCommand: ").strip()
+        action = parts[0].lower()
 
-        # =========================
-        # SHOW
-        # =========================
-        if cmd == "show":
+        if action == "help":
+            show_help()
+            continue
+
+        if action == "clear":
+            clear_screen()
+            show_help()
+            continue
+
+        if action == "show":
             show_paths()
             continue
 
-        # =========================
-        # DONE
-        # =========================
-        if cmd == "done":
+        if action == "name":
+            if len(parts) < 3:
+                print("Format: name <no> <nama>")
+                continue
+            try:
+                idx = int(parts[1])
+                if idx < 1 or idx > total_node:
+                    print(f"Node hanya boleh 1 - {total_node}")
+                    continue
+                node_labels[idx] = " ".join(parts[2:])
+                print(f"Node {idx} dinamai: {node_labels[idx]}")
+            except ValueError:
+                print("Nomor node harus angka")
+            continue
 
-            total_registered = len(used_paths)
-
-            minimal_path = total_node - 1
-
-            if total_registered < minimal_path:
-
+        if action == "done":
+            if len(used_paths) < minimal_path():
                 print(
                     f"Minimal path belum terpenuhi. "
-                    f"Minimal: {minimal_path}"
+                    f"Minimal: {minimal_path()}"
                 )
-
                 continue
-
             print("Input selesai")
             break
 
-        # =========================
-        # ADD PATH
-        # =========================
-        if cmd.startswith("add"):
-
-            data = cmd.split()
-
-            if len(data) != 4:
-                print(
-                    "Format salah. "
-                    "Gunakan: add node1 node2 distance"
-                )
+        if action == "add":
+            if len(parts) != 4:
+                print("Format: add <node1> <node2> <distance>")
                 continue
-
             try:
-
-                node1 = int(data[1])
-                node2 = int(data[2])
-                distance = int(data[3])
-
-                # VALIDASI NODE
-                if (
-                    node1 < 1
-                    or node1 > total_node
-                    or node2 < 1
-                    or node2 > total_node
-                ):
-                    print(
-                        f"Node hanya boleh "
-                        f"1 - {total_node}"
-                    )
+                node1, node2, distance = (
+                    int(parts[1]),
+                    int(parts[2]),
+                    int(parts[3]),
+                )
+                if not (1 <= node1 <= total_node and 1 <= node2 <= total_node):
+                    print(f"Node hanya boleh 1 - {total_node}")
                     continue
-
-                # VALIDASI SELF LOOP
                 if node1 == node2:
-                    print(
-                        "Node tidak boleh sama"
-                    )
+                    print("Node tidak boleh sama")
                     continue
-
-                # VALIDASI DISTANCE
                 if distance <= 0:
-                    print(
-                        "Distance harus > 0"
-                    )
+                    print("Distance harus > 0")
                     continue
-
-                # VALIDASI DUPLICATE
-                edge = tuple(
-                    sorted((node1, node2))
-                )
-
+                edge = tuple(sorted((node1, node2)))
                 if edge in used_paths:
-                    print(
-                        "Path sudah diregistrasi"
-                    )
+                    print("Path sudah diregistrasi")
                     continue
-
-                # SIMPAN
                 used_paths[edge] = distance
-
-                Path(
-                    nodes[node1 - 1],
-                    nodes[node2 - 1],
-                    distance
-                )
-
+                Path(nodes[node1 - 1], nodes[node2 - 1], distance)
                 print("Path berhasil ditambahkan")
-
             except ValueError:
                 print("Input harus angka")
-
             continue
 
-        # =========================
-        # UNKNOWN COMMAND
-        # =========================
-        print("Command tidak dikenali")
+        print("Command tidak dikenali. Ketik 'help' untuk bantuan.")
 
 def kruskal():
     parent = {}
