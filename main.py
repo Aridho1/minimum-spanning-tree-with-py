@@ -3,6 +3,7 @@ import os
 import networkx as nx
 import matplotlib.pyplot as plt
 
+_graph_title = "Kabel Internet Antar Daerah"
 
 COLORS = {
     # reset & style
@@ -98,6 +99,8 @@ def load_default_data():
     Path(node3, node5, 8)
 
 def input_custom_data():
+    global _graph_title
+    
     while True:
         try:
             total_node = int(input("Jumlah node (min 2): "))
@@ -121,6 +124,13 @@ def input_custom_data():
 
     def minimal_path():
         return total_node - 1
+    
+    def _log_update(_from, _to, label = ""):
+        ...
+        print(
+            ("", f"[{label}]")[not not label],
+            f"'{_from}' berhasil diubah menjadi '{_to}'" if _from != _to else f"{_to} Sudah digunakan"
+        )
 
     def show_help():
         print("\n===================================")
@@ -137,7 +147,10 @@ def input_custom_data():
         print("  help")
         print("  clear")
         print("  show")
+        print("  title <graph title>")
         print("  name <no> <nama>")
+        print("  edit <no> <nama>")
+        print("  remove <no> <nama>")
         print("  add <node1> <node2> <distance>")
         print("  done")
         print("===================================")
@@ -306,7 +319,8 @@ def input_custom_data():
     show_help()
 
     while True:
-        parts = input("\nCommand: ").strip().split()
+        _input_cmd = input("\nCommand: ")
+        parts = _input_cmd.strip().split()
         if not parts:
             continue
 
@@ -319,6 +333,19 @@ def input_custom_data():
         if action == "clear":
             clear_screen()
             show_help()
+            continue
+            
+        if action == "title":
+            ...
+            if len(parts) < 2:
+                ...
+                print("Berikan title nya")
+                continue
+
+            _prev = _graph_title
+            _graph_title = " ".join(parts[1:])
+            _log_update(_prev, _graph_title, "Title")
+
             continue
 
         if action == "show":
@@ -334,8 +361,11 @@ def input_custom_data():
                 if idx < 1 or idx > total_node:
                     print(f"Node hanya boleh 1 - {total_node}")
                     continue
-                node_labels[idx] = " ".join(parts[2:])
-                print(f"Node {idx} dinamai: {node_labels[idx]}")
+                
+                name = " ".join(parts[2:])
+                _prev = node_labels[idx]
+                node_labels[idx] = name
+                _log_update(_prev, name, f"Node {idx}")
             except ValueError:
                 print("Nomor node harus angka")
             continue
@@ -358,7 +388,7 @@ def input_custom_data():
                 node1, node2, distance = (
                     int(parts[1]),
                     int(parts[2]),
-                    int(parts[3]),
+                    int(parts[3]),  
                 )
                 if not (1 <= node1 <= total_node and 1 <= node2 <= total_node):
                     print(f"Node hanya boleh 1 - {total_node}")
@@ -378,6 +408,165 @@ def input_custom_data():
                 print("Path berhasil ditambahkan")
             except ValueError:
                 print("Input harus angka")
+            continue
+
+        if action == "edit":
+
+            if len(parts) != 4:
+                print(
+                    "Format: edit "
+                    "<node1> <node2> <distance>"
+                )
+                continue
+
+            try:
+                node1 = int(parts[1])
+                node2 = int(parts[2])
+                distance = int(parts[3])
+
+                # =========================
+                # VALIDASI NODE
+                # =========================
+                if not (
+                    1 <= node1 <= total_node
+                    and
+                    1 <= node2 <= total_node
+                ):
+                    print(
+                        f"Node hanya boleh "
+                        f"1 - {total_node}"
+                    )
+                    continue
+
+                # =========================
+                # VALIDASI SELF LOOP
+                # =========================
+                if node1 == node2:
+                    print(
+                        "Node tidak boleh sama"
+                    )
+                    continue
+
+                # =========================
+                # VALIDASI DISTANCE
+                # =========================
+                if distance <= 0:
+                    print(
+                        "Distance harus > 0"
+                    )
+                    continue
+
+                edge = tuple(
+                    sorted((node1, node2))
+                )
+
+                # =========================
+                # VALIDASI EXIST
+                # =========================
+                if edge not in used_paths:
+                    print(
+                        "Path belum diregistrasi"
+                    )
+                    continue
+
+                # =========================
+                # UPDATE USED PATH
+                # =========================
+                used_paths[edge] = distance
+
+                # =========================
+                # UPDATE PATH OBJECT
+                # =========================
+                for path_obj in Path._self_map.values():
+
+                    current_edge = tuple(
+                        sorted(path_obj._path)
+                    )
+
+                    if current_edge == edge:
+                        path_obj.distance = distance
+                        break
+
+                print("Path berhasil diupdate")
+
+            except ValueError:
+                print("Input harus angka")
+
+            continue
+        
+        if action == "remove":
+
+            if len(parts) != 3:
+                print(
+                    "Format: remove <node1> <node2>"
+                )
+                continue
+
+            try:
+                node1 = int(parts[1])
+                node2 = int(parts[2])
+
+                # =========================
+                # VALIDASI NODE
+                # =========================
+                if not (
+                    1 <= node1 <= total_node
+                    and
+                    1 <= node2 <= total_node
+                ):
+                    print(
+                        f"Node hanya boleh "
+                        f"1 - {total_node}"
+                    )
+                    continue
+
+                # =========================
+                # VALIDASI SELF LOOP
+                # =========================
+                if node1 == node2:
+                    print(
+                        "Node tidak boleh sama"
+                    )
+                    continue
+
+                edge = tuple(
+                    sorted((node1, node2))
+                )
+
+                # =========================
+                # VALIDASI EXIST
+                # =========================
+                if edge not in used_paths:
+                    print(
+                        "Path belum diregistrasi"
+                    )
+                    continue
+
+                # =========================
+                # REMOVE PATH
+                # =========================
+                del used_paths[edge]
+
+                target_path_id = None
+
+                for path_id, path_obj in Path._self_map.items():
+
+                    current_edge = tuple(
+                        sorted(path_obj._path)
+                    )
+
+                    if current_edge == edge:
+                        target_path_id = path_id
+                        break
+
+                if target_path_id:
+                    del Path._self_map[target_path_id]
+
+                print("Path berhasil dihapus")
+
+            except ValueError:
+                print("Input harus angka")
+
             continue
 
         print("Command tidak dikenali. Ketik 'help' untuk bantuan.")
@@ -477,7 +666,11 @@ def draw_graph(mst_paths):
         edge_labels=labels
     )
 
-    plt.title("Minimum Spanning Tree - Kabel Internet Antar Daerah")
+    plt.title(
+        f"Minimum Spanning Tree"
+        f"{f' - {_graph_title}' if _graph_title else ''}"
+    )
+    # plt.title(f"Minimum Spanning Tree{(f" - {_graph_title}", "")[not not _graph_title]}")
     # plt.show()
 
 def draw_graph2(mst_paths):
@@ -574,8 +767,10 @@ def draw_graph2(mst_paths):
         edge_labels=labels
     )
 
+    # print(f"{_graph_title = }")
     plt.title(
-        "Minimum Spanning Tree - Kabel Internet Antar Daerah"
+        f"Minimum Spanning Tree"
+        f"{f' - {_graph_title}' if _graph_title else ''}"
     )
 
     # plt.show()
