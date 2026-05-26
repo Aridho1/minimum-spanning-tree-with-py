@@ -71,147 +71,205 @@ def input_custom_data():
             input("Jumlah node (min 2): ")
         )
 
+    # =========================
+    # INPUT NAMA NODE
+    # =========================
+    print("\n===================================")
+    print("Input Nama Node")
+    print("===================================")
+
     nodes = []
+    node_labels = {}
 
     for i in range(total_node):
+
+        label = input(
+            f"Nama node {i + 1}: "
+        )
+
         node = Node()
+
         nodes.append(node)
 
-    # =========================
-    # VALIDASI JUMLAH PATH
-    # =========================
-    minimal_path = total_node - 1
+        node_labels[node._id] = label
 
+    # =========================
+    # TOTAL MAX PATH
+    # =========================
     maksimal_path = (
         total_node * (total_node - 1)
     ) // 2
 
     print("\n===================================")
-    print(f"Minimal jalur : {minimal_path}")
-    print(f"Maksimal jalur : {maksimal_path}")
+    print(f"Max path: {maksimal_path}")
     print("===================================")
 
-    total_path = int(
-        input("\nJumlah jalur: ")
-    )
-
-    while (
-        total_path < minimal_path
-        or total_path > maksimal_path
-    ):
-        print(
-            f"Jumlah jalur harus antara "
-            f"{minimal_path} - {maksimal_path}"
-        )
-
-        total_path = int(
-            input("Jumlah jalur: ")
-        )
+    # =========================
+    # REGISTRY PATH
+    # =========================
+    used_paths = {}
 
     # =========================
-    # FORMAT INPUT
+    # SHOW PATH FUNCTION
+    # =========================
+    def show_paths():
+
+        print("\n===================================")
+        print("LIST PATH")
+        print("===================================")
+
+        for i in range(1, total_node + 1):
+            for j in range(i + 1, total_node + 1):
+
+                edge = tuple(sorted((i, j)))
+
+                node1_label = node_labels[i]
+                node2_label = node_labels[j]
+
+                if edge in used_paths:
+
+                    distance = used_paths[edge]
+
+                    print(
+                        f"{i} ({node1_label}) "
+                        f"<--> "
+                        f"{j} ({node2_label}) "
+                        f"= {distance}"
+                    )
+
+                else:
+
+                    print(
+                        f"{i} ({node1_label}) "
+                        f"<--> "
+                        f"{j} ({node2_label}) "
+                        f"= AVAILABLE"
+                    )
+
+    # =========================
+    # HELP
     # =========================
     print("\n===================================")
-    print("Format Input Jalur")
-    print("node1 node2 jarak")
-    print("Contoh: 1 2 10")
+    print("COMMAND")
+    print("===================================")
+    print("show")
+    print("add node1 node2 distance")
+    print("done")
     print("===================================")
 
     # =========================
-    # VALIDASI DUPLICATE EDGE
+    # MAIN LOOP
     # =========================
-    used_paths = set()
+    while True:
 
-    current_path = 0
+        cmd = input("\nCommand: ").strip()
 
-    while current_path < total_path:
+        # =========================
+        # SHOW
+        # =========================
+        if cmd == "show":
+            show_paths()
+            continue
 
-        try:
-            data = input(
-                f"\nJalur ke-{current_path + 1}: "
-            ).split()
+        # =========================
+        # DONE
+        # =========================
+        if cmd == "done":
 
-            # =========================
-            # VALIDASI FORMAT
-            # =========================
-            if len(data) != 3:
+            total_registered = len(used_paths)
+
+            minimal_path = total_node - 1
+
+            if total_registered < minimal_path:
+
                 print(
-                    "Format salah."
-                    " Gunakan:"
-                    " node1 node2 jarak"
+                    f"Minimal path belum terpenuhi. "
+                    f"Minimal: {minimal_path}"
+                )
+
+                continue
+
+            print("Input selesai")
+            break
+
+        # =========================
+        # ADD PATH
+        # =========================
+        if cmd.startswith("add"):
+
+            data = cmd.split()
+
+            if len(data) != 4:
+                print(
+                    "Format salah. "
+                    "Gunakan: add node1 node2 distance"
                 )
                 continue
 
-            node1 = int(data[0])
-            node2 = int(data[1])
-            distance = int(data[2])
+            try:
 
-            # =========================
-            # VALIDASI NODE
-            # =========================
-            if (
-                node1 < 1
-                or node1 > total_node
-                or node2 < 1
-                or node2 > total_node
-            ):
-                print(
-                    f"Node hanya boleh "
-                    f"1 - {total_node}"
+                node1 = int(data[1])
+                node2 = int(data[2])
+                distance = int(data[3])
+
+                # VALIDASI NODE
+                if (
+                    node1 < 1
+                    or node1 > total_node
+                    or node2 < 1
+                    or node2 > total_node
+                ):
+                    print(
+                        f"Node hanya boleh "
+                        f"1 - {total_node}"
+                    )
+                    continue
+
+                # VALIDASI SELF LOOP
+                if node1 == node2:
+                    print(
+                        "Node tidak boleh sama"
+                    )
+                    continue
+
+                # VALIDASI DISTANCE
+                if distance <= 0:
+                    print(
+                        "Distance harus > 0"
+                    )
+                    continue
+
+                # VALIDASI DUPLICATE
+                edge = tuple(
+                    sorted((node1, node2))
                 )
-                continue
 
-            # =========================
-            # VALIDASI SELF LOOP
-            # =========================
-            if node1 == node2:
-                print(
-                    "Node asal dan tujuan "
-                    "tidak boleh sama"
+                if edge in used_paths:
+                    print(
+                        "Path sudah diregistrasi"
+                    )
+                    continue
+
+                # SIMPAN
+                used_paths[edge] = distance
+
+                Path(
+                    nodes[node1 - 1],
+                    nodes[node2 - 1],
+                    distance
                 )
-                continue
 
-            # =========================
-            # VALIDASI JARAK
-            # =========================
-            if distance <= 0:
-                print(
-                    "Jarak harus "
-                    "lebih besar dari 0"
-                )
-                continue
+                print("Path berhasil ditambahkan")
 
-            # =========================
-            # VALIDASI DUPLICATE PATH
-            # =========================
-            edge = tuple(
-                sorted((node1, node2))
-            )
+            except ValueError:
+                print("Input harus angka")
 
-            if edge in used_paths:
-                print(
-                    "Jalur sudah ada "
-                    "(duplicate path)"
-                )
-                continue
+            continue
 
-            used_paths.add(edge)
-
-            # =========================
-            # TAMBAHKAN PATH
-            # =========================
-            Path(
-                nodes[node1 - 1],
-                nodes[node2 - 1],
-                distance
-            )
-
-            current_path += 1
-
-        except ValueError:
-            print(
-                "Input harus berupa angka"
-            )
+        # =========================
+        # UNKNOWN COMMAND
+        # =========================
+        print("Command tidak dikenali")
 
 def kruskal():
     parent = {}
