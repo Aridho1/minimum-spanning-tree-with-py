@@ -56,7 +56,20 @@ def load_default_data():
     Path(node3, node5, 8)
 
 def input_custom_data():
-    total_node = int(input("Jumlah node: "))
+
+    # =========================
+    # INPUT JUMLAH NODE
+    # =========================
+    total_node = int(
+        input("Jumlah node (min 2): ")
+    )
+
+    while total_node < 2:
+        print("Jumlah node minimal 2")
+
+        total_node = int(
+            input("Jumlah node (min 2): ")
+        )
 
     nodes = []
 
@@ -64,24 +77,141 @@ def input_custom_data():
         node = Node()
         nodes.append(node)
 
-    total_path = int(input("Jumlah jalur: "))
+    # =========================
+    # VALIDASI JUMLAH PATH
+    # =========================
+    minimal_path = total_node - 1
 
-    print("\nFormat input:")
-    print("node1 node2 jarak")
-    print("Contoh: 1 2 10\n")
+    maksimal_path = (
+        total_node * (total_node - 1)
+    ) // 2
 
-    for i in range(total_path):
-        data = input(f"Jalur ke-{i+1}: ").split()
+    print("\n===================================")
+    print(f"Minimal jalur : {minimal_path}")
+    print(f"Maksimal jalur : {maksimal_path}")
+    print("===================================")
 
-        node1 = int(data[0])
-        node2 = int(data[1])
-        distance = int(data[2])
+    total_path = int(
+        input("\nJumlah jalur: ")
+    )
 
-        Path(
-            nodes[node1 - 1],
-            nodes[node2 - 1],
-            distance
+    while (
+        total_path < minimal_path
+        or total_path > maksimal_path
+    ):
+        print(
+            f"Jumlah jalur harus antara "
+            f"{minimal_path} - {maksimal_path}"
         )
+
+        total_path = int(
+            input("Jumlah jalur: ")
+        )
+
+    # =========================
+    # FORMAT INPUT
+    # =========================
+    print("\n===================================")
+    print("Format Input Jalur")
+    print("node1 node2 jarak")
+    print("Contoh: 1 2 10")
+    print("===================================")
+
+    # =========================
+    # VALIDASI DUPLICATE EDGE
+    # =========================
+    used_paths = set()
+
+    current_path = 0
+
+    while current_path < total_path:
+
+        try:
+            data = input(
+                f"\nJalur ke-{current_path + 1}: "
+            ).split()
+
+            # =========================
+            # VALIDASI FORMAT
+            # =========================
+            if len(data) != 3:
+                print(
+                    "Format salah."
+                    " Gunakan:"
+                    " node1 node2 jarak"
+                )
+                continue
+
+            node1 = int(data[0])
+            node2 = int(data[1])
+            distance = int(data[2])
+
+            # =========================
+            # VALIDASI NODE
+            # =========================
+            if (
+                node1 < 1
+                or node1 > total_node
+                or node2 < 1
+                or node2 > total_node
+            ):
+                print(
+                    f"Node hanya boleh "
+                    f"1 - {total_node}"
+                )
+                continue
+
+            # =========================
+            # VALIDASI SELF LOOP
+            # =========================
+            if node1 == node2:
+                print(
+                    "Node asal dan tujuan "
+                    "tidak boleh sama"
+                )
+                continue
+
+            # =========================
+            # VALIDASI JARAK
+            # =========================
+            if distance <= 0:
+                print(
+                    "Jarak harus "
+                    "lebih besar dari 0"
+                )
+                continue
+
+            # =========================
+            # VALIDASI DUPLICATE PATH
+            # =========================
+            edge = tuple(
+                sorted((node1, node2))
+            )
+
+            if edge in used_paths:
+                print(
+                    "Jalur sudah ada "
+                    "(duplicate path)"
+                )
+                continue
+
+            used_paths.add(edge)
+
+            # =========================
+            # TAMBAHKAN PATH
+            # =========================
+            Path(
+                nodes[node1 - 1],
+                nodes[node2 - 1],
+                distance
+            )
+
+            current_path += 1
+
+        except ValueError:
+            print(
+                "Input harus berupa angka"
+            )
 
 def kruskal():
     parent = {}
