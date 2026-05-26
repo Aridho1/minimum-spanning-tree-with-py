@@ -86,7 +86,7 @@ path1 = Path(node1, node2, 10)
 path2 = Path(node1, node4, 7)
 path3 = Path(node2, node3, 6)
 path4 = Path(node2, node5, 5)
-path5 = Path(node4, node3, 9)
+path5 = Path(node4, node3, 4)
 path6 = Path(node4, node5, 9)
 path7 = Path(node3, node5, 8)
 
