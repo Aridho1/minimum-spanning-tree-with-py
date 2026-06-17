@@ -1,8 +1,8 @@
 import os
+import shlex
 
 import networkx as nx
 import matplotlib.pyplot as plt
-
 _graph_title = "Kabel Internet Antar Daerah"
 
 COLORS = {
@@ -43,6 +43,39 @@ COLORS = {
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
+
+
+def print_error(title, usage=None, examples=None):
+    print(f"{COLORS['red']}{title}{COLORS['reset']}")
+    if usage:
+        print(f"\n{COLORS['bold']}Usage:{COLORS['reset']}\n")
+        print(usage)
+    if examples:
+        print(f"\n{COLORS['bold']}Examples:{COLORS['reset']}\n")
+        print(examples)
+
+
+def print_success(msg):
+    print(f"{COLORS['green']}{msg}{COLORS['reset']}")
+
+
+def print_warning(msg):
+    print(f"{COLORS['yellow']}{msg}{COLORS['reset']}")
+
+
+def print_info(msg):
+    print(f"{COLORS['cyan']}{msg}{COLORS['reset']}")
+
+
+def confirm(prompt_lines, default_yes=False):
+    color = COLORS["cyan"] if default_yes else COLORS["yellow"]
+    suffix = "[Y/n]" if default_yes else "[y/N]"
+    for line in prompt_lines:
+        print(line)
+    answer = input(f"{color}{suffix}{COLORS['reset']}: ").strip().lower()
+    if not answer:
+        return default_yes
+    return answer in ("y", "yes")
 
 
 class Node:
@@ -100,227 +133,581 @@ def load_default_data():
 
 def input_custom_data():
     global _graph_title
-    
-    while True:
-        try:
-            total_node = int(input("Jumlah node (min 2): "))
-            if total_node >= 2:
-                break
-            print("Jumlah node minimal 2")
-        except ValueError:
-            print("Input harus angka")
 
-    nodes = [Node() for _ in range(total_node)]
-    node_labels = {i: f"Node {i}" for i in range(1, total_node + 1)}
+    node_labels = {}
     used_paths = {}
 
-    def get_longest_node_labels():
-        ...
-        return max(len(label) for label in node_labels.values())
+    def display_name(node_id):
+        label = node_labels.get(node_id, "")
+        return label if label else f"Node {node_id}"
 
+    def find_node_by_label(label):
+        label_lower = label.lower()
+        for node_id, stored in node_labels.items():
+            if stored and stored.lower() == label_lower:
+                return node_id
+        return None
+
+    def validate_label(label, exclude_node_id=None):
+        if not label or not label.strip():
+            return "Label cannot be empty."
+        if label.strip().isdigit():
+            return "Label cannot contain only digits."
+        existing = find_node_by_label(label)
+        if existing is not None and existing != exclude_node_id:
+            return f"Label '{label}' is already used by node {existing}."
+        return None
+
+    def try_resolve_node(value):
+        if value.isdigit():
+            node_id = int(value)
+            if node_id in node_labels:
+                return node_id, None
+            return None, value
+        found = find_node_by_label(value)
+        if found is not None:
+            return found, None
+        return None, value
+
+    def resolve_node(value):
+        node_id, missing = try_resolve_node(value)
+        if node_id is None:
+            if value.isdigit():
+                raise ValueError(f"Node {value} does not exist.")
+            raise ValueError(f"Node '{value}' does not exist.")
+        return node_id
+
+    def create_node(label=""):
+        if label:
+            err = validate_label(label)
+            if err:
+                print_error(err)
+                return None
+        node = Node()
+        node_labels[node._id] = label if label else ""
+        return node._id
+
+    def create_nodes_count(count):
+        created = []
+        for _ in range(count):
+            node_id = create_node()
+            if node_id is None:
+                return created
+            created.append(node_id)
+        return created
+
+    def remove_node(node_id):
+        if node_id not in node_labels:
+            return
+        del node_labels[node_id]
+        del Node._self_map[node_id]
+        edges_to_remove = [edge for edge in used_paths if node_id in edge]
+        for edge in edges_to_remove:
+            del used_paths[edge]
+        path_ids_to_remove = [
+            path_id
+            for path_id, path_obj in Path._self_map.items()
+            if node_id in path_obj._path
+        ]
+        for path_id in path_ids_to_remove:
+            del Path._self_map[path_id]
+
+    def remove_nodes(node_ids):
+        for node_id in node_ids:
+            remove_node(node_id)
+
+    def set_node_name(node_id, label):
+        if node_id not in node_labels:
+            print_error(f"Node {node_id} does not exist.")
+            return
+        err = validate_label(label, exclude_node_id=node_id)
+        if err:
+            print_error(err)
+            return
+        current = node_labels[node_id]
+        if current:
+            if not confirm(
+                [
+                    f"Node {node_id} is currently named:",
+                    "",
+                    f"  {current}",
+                    "",
+                    "Rename to:",
+                    "",
+                    f"  {label}",
+                ],
+                default_yes=True,
+            ):
+                return
+        node_labels[node_id] = label
+        print_success(f"Node {node_id} renamed to '{label}'.")
+
+    def create_path(node1_id, node2_id, distance):
+        edge = tuple(sorted((node1_id, node2_id)))
+        if edge in used_paths:
+            print_warning("Path already registered.")
+            return False
+        used_paths[edge] = distance
+        Path(Node._self_map[node1_id], Node._self_map[node2_id], distance)
+        print_success("Path added successfully.")
+        return True
+
+    def edit_path(node1_id, node2_id, distance):
+        edge = tuple(sorted((node1_id, node2_id)))
+        if edge not in used_paths:
+            print_warning("Path is not registered.")
+            return False
+        used_paths[edge] = distance
+        for path_obj in Path._self_map.values():
+            if tuple(sorted(path_obj._path)) == edge:
+                path_obj.distance = distance
+                break
+        print_success("Path updated successfully.")
+        return True
+
+    def remove_path(node1_id, node2_id):
+        edge = tuple(sorted((node1_id, node2_id)))
+        if edge not in used_paths:
+            print_warning("Path is not registered.")
+            return False
+        del used_paths[edge]
+        target_path_id = None
+        for path_id, path_obj in Path._self_map.items():
+            if tuple(sorted(path_obj._path)) == edge:
+                target_path_id = path_id
+                break
+        if target_path_id:
+            del Path._self_map[target_path_id]
+        print_success("Path removed successfully.")
+        return True
+
+    def show_node_list():
+        print("\n===================================")
+        print("NODE LIST")
+        print("===================================")
+        if not node_labels:
+            print_info("  (no nodes)")
+        else:
+            for node_id in sorted(node_labels):
+                label = node_labels[node_id]
+                color = COLORS["green"] if label else COLORS["yellow"]
+                print(
+                    f"  {node_id} "
+                    f"{color}{display_name(node_id)}{COLORS['reset']}"
+                )
+        print("===================================")
+
+    def get_longest_node_labels():
+        if not node_labels:
+            return 0
+        return max(len(display_name(node_id)) for node_id in node_labels)
+
+    def node_count():
+        return len(node_labels)
 
     def maksimal_path():
-        return total_node * (total_node - 1) // 2
+        n = node_count()
+        return n * (n - 1) // 2
 
     def minimal_path():
-        return total_node - 1
-    
-    def _log_update(_from, _to, label = ""):
-        ...
+        n = node_count()
+        return max(0, n - 1) if n >= 2 else 0
+
+    def _log_update(_from, _to, label=""):
         print(
-            ("", f"[{label}]")[not not label],
-            f"'{_from}' berhasil diubah menjadi '{_to}'" if _from != _to else f"'{_to}' Sudah digunakan"
+            ("", f"[{label}]")[bool(label)],
+            (
+                f"'{_from}' updated to '{_to}'"
+                if _from != _to
+                else f"'{_to}' is already in use"
+            ),
         )
 
     def show_help():
         print("\n===================================")
-        print("BANTUAN / STATUS")
+        print("HELP / STATUS")
         print("===================================")
-        print(f"Jumlah node      : {total_node}")
-        print(f"Max path         : {maksimal_path()}")
-        print(f"Minimal path     : {minimal_path()}")
-        print(f"Path terdaftar   : {len(used_paths)} / {maksimal_path()}")
-        print("\n--- Daftar Node ---")
-        for i in range(1, total_node + 1):
-            print(f"  {i}. {node_labels[i]}")
-        print("\n--- Perintah ---")
+        print(f"Node count       : {node_count()}")
+        # print(f"Max paths        : {maksimal_path()}")
+        print(f"Min paths        : {minimal_path()}")
+        print(f"Registered paths : {len(used_paths)} / {maksimal_path()}")
+        print("\n--- Commands ---")
         print("  help")
         print("  clear")
         print("  show")
         print("  title <graph title>")
-        print("  name <no> <nama>")
-        print("  edit <no> <nama>")
-        print("  remove <no> <nama>")
+        print("  node list")
+        print("  node <count>")
+        print("  node <label>")
+        print("  node <label1,label2,...>")
+        print("  node <count> <label1,label2,...>")
+        print("  node name <id> <label>")
+        print("  node remove <id>")
+        print("  node remove <id1,id2,...>")
         print("  add <node1> <node2> <distance>")
+        print("  edit <node1> <node2> <distance>")
+        print("  remove <node1> <node2>")
         print("  done")
         print("===================================")
 
     def show_paths():
         print("\n===================================")
-        print("LIST PATH")
+        print("PATH LIST")
         print("===================================")
-        longestName = get_longest_node_labels()
-        
-        # PERBAIKAN 1: Ambil panjang digit langsung dari total_node maksimal
-        longestIndex = len(str(total_node))
+        if node_count() < 2:
+            print_info("  (need at least 2 nodes)")
+            print("===================================")
+            return
 
-        for i in range(1, total_node + 1):
-            for j in range(i + 1, total_node + 1):
+        longest_name = get_longest_node_labels()
+        longest_index = len(str(max(node_labels)))
+
+        for i in sorted(node_labels):
+            for j in sorted(node_labels):
+                if i >= j:
+                    continue
 
                 edge = (i, j)
-
-                label1 = node_labels[i]
-                label2 = node_labels[j]
-
-                # =========================
-                # STATUS PATH
-                # =========================
+                label1 = display_name(i)
+                label2 = display_name(j)
                 is_available = edge not in used_paths
 
                 if is_available:
-
-                    statusOrDistance = (
-                        f"{COLORS['yellow']}"
-                        "AVAILABLE"
-                        f"{COLORS['reset']}"
+                    status_or_distance = (
+                        f"{COLORS['yellow']}AVAILABLE{COLORS['reset']}"
                     )
-
-                    nodeIndexColor = COLORS["blue"]
-                    nodeLabelColor = COLORS["cyan"]
-
+                    node_index_color = COLORS["blue"]
+                    node_label_color = COLORS["cyan"]
                 else:
-
                     distance = used_paths[edge]
-
-                    statusOrDistance = (
-                        f"{COLORS['green']}"
-                        f"{distance}"
-                        f"{COLORS['reset']}"
+                    status_or_distance = (
+                        f"{COLORS['green']}{distance}{COLORS['reset']}"
                     )
+                    node_index_color = COLORS["magenta"]
+                    node_label_color = COLORS["cyan"]
 
-                    nodeIndexColor = COLORS["magenta"]
-                    nodeLabelColor = COLORS["cyan"]
-
-                # =========================
-                # FORMAT BARIS
-                # =========================
                 line = (
-                    f"{nodeIndexColor}"
-                    f"{i:{longestIndex}} "
-
-                    f"{nodeLabelColor}"
-                    f"{f'({label1})':{longestName+2}} "
-
-                    f"{COLORS['magenta']}"
-                    "<--> "
-
-                    f"{nodeIndexColor}"
-                    f"{j:{longestIndex}} "
-
-                    f"{nodeLabelColor}"
-                    f"{f'({label2})':{longestName+2}} "
-
-                    f"{COLORS['magenta']}"
-                    "= "
-
-                    f"{statusOrDistance}"
-                    f"{COLORS['reset']}"
+                    f"{node_index_color}{i:{longest_index}} "
+                    f"{node_label_color}{f'({label1})':{longest_name + 2}} "
+                    f"{COLORS['magenta']}<--> "
+                    f"{node_index_color}{j:{longest_index}} "
+                    f"{node_label_color}{f'({label2})':{longest_name + 2}} "
+                    f"{COLORS['magenta']}= {status_or_distance}{COLORS['reset']}"
                 )
-
                 print(line)
 
-        print(
-            # f"\n{COLORS['bold']}"
-            # f"{COLORS['cyan']}"
-            f"{COLORS['reset']}"
-            "==================================="
-        )
+        print(f"{COLORS['reset']}===================================")
 
-        return
-        for i in range(1, total_node + 1):
-            for j in range(i + 1, total_node + 1):
+    def handle_node_command(parts):
+        if len(parts) < 2:
+            print_error(
+                "Invalid node command.",
+                usage=(
+                    "node <count>\n"
+                    "node <label>\n"
+                    "node <label1,label2,...>\n"
+                    "node <count> <label1,label2,...>\n"
+                    "node list\n"
+                    "node name <id> <label>\n"
+                    "node remove <id>\n"
+                    "node remove <id1,id2,...>"
+                ),
+                examples=(
+                    "node 5\n"
+                    "node Jakarta\n"
+                    "node Jakarta,Bandung\n"
+                    "node 5 Jakarta,Bandung\n"
+                    'node "Jakarta Selatan"\n'
+                    "node list\n"
+                    "node name 5 Jakarta\n"
+                    'node name 5 "Jakarta Selatan"\n'
+                    "node remove 5\n"
+                    "node remove 5,6,7"
+                ),
+            )
+            return
 
-                edge = (i, j)
+        sub = parts[1].lower()
 
-                label1 = node_labels[i]
-                label2 = node_labels[j]
+        if sub == "list":
+            show_node_list()
+            return
 
-                # =========================
-                # STATUS PATH
-                # =========================
-                is_available = edge not in used_paths
+        if sub == "remove":
+            if len(parts) != 3:
+                print_error(
+                    "Invalid node remove command.",
+                    usage="node remove <id>\nnode remove <id1,id2,...>",
+                    examples="node remove 5\nnode remove 5,6,7",
+                )
+                return
+            raw_ids = [s.strip() for s in parts[2].split(",") if s.strip()]
+            node_ids = []
+            for raw in raw_ids:
+                if not raw.isdigit():
+                    print_error(f"Invalid node ID: {raw}")
+                    return
+                node_id = int(raw)
+                if node_id not in node_labels:
+                    print_error(f"Node {node_id} does not exist.")
+                    return
+                node_ids.append(node_id)
+            if not confirm(
+                [
+                    "The following nodes will be removed:",
+                    "",
+                    *[f"  {node_id}" for node_id in node_ids],
+                    "",
+                    "All connected paths will also be removed.",
+                ],
+                default_yes=False,
+            ):
+                print_info("Cancelled.")
+                return
+            remove_nodes(node_ids)
+            print_success("Node(s) removed successfully.")
+            return
 
-                if is_available:
+        if sub == "name":
+            if len(parts) < 4:
+                print_error(
+                    "Invalid node name command.",
+                    usage="node name <id> <label>",
+                    examples=(
+                        "node name 5 Jakarta\n"
+                        'node name 5 "Jakarta Selatan"'
+                    ),
+                )
+                return
+            if not parts[2].isdigit():
+                print_error("Node ID must be a number.")
+                return
+            node_id = int(parts[2])
+            label = " ".join(parts[3:])
+            set_node_name(node_id, label)
+            return
 
-                    statusOrDistance = (
-                        f"{COLORS['yellow']}"
-                        f"AVAILABLE"
-                        f"{COLORS['reset']}"
+        arg = parts[1]
+        labels_part = parts[2] if len(parts) > 2 else None
+
+        if labels_part is not None:
+            if not arg.isdigit():
+                print_error(
+                    "Invalid node command.",
+                    usage="node <count> <label1,label2,...>",
+                    examples="node 5 Jakarta,Bandung",
+                )
+                return
+            count = int(arg)
+            if count <= 0:
+                print_error("Node count must be greater than 0.")
+                return
+            labels = [
+                label.strip()
+                for label in labels_part.split(",")
+                if label.strip()
+            ]
+            for label in labels:
+                err = validate_label(label)
+                if err:
+                    print_error(err)
+                    return
+            if len(labels) != count:
+                extra = abs(len(labels) - count)
+                if len(labels) < count:
+                    detail = (
+                        f"The remaining {extra} nodes will use default names."
                     )
-
-                    lineColor = COLORS["blue"]
-
                 else:
+                    detail = f"Only the first {count} names will be used."
+                if not confirm(
+                    [
+                        f"Name count ({len(labels)}) does not match "
+                        f"requested node count ({count}).",
+                        "",
+                        detail,
+                    ],
+                    default_yes=False,
+                ):
+                    print_info("Cancelled.")
+                    return
+                labels = labels[:count]
+            create_nodes_count(count)
+            node_ids = sorted(node_labels)[-count:]
+            for node_id, label in zip(node_ids, labels):
+                node_labels[node_id] = label
+            for node_id in node_ids:
+                print_success(f"  {display_name(node_id)}")
+            return
 
-                    distance = used_paths[edge]
+        if arg.isdigit():
+            count = int(arg)
+            if count <= 0:
+                print_error("Node count must be greater than 0.")
+                return
+            create_nodes_count(count)
+            for node_id in sorted(node_labels)[-count:]:
+                print_success(f"  {display_name(node_id)}")
+            return
 
-                    statusOrDistance = (
-                        f"{COLORS['green']}"
-                        f"{distance}"
-                        f"{COLORS['reset']}"
-                    )
+        if "," in arg:
+            labels = [label.strip() for label in arg.split(",") if label.strip()]
+            for label in labels:
+                err = validate_label(label)
+                if err:
+                    print_error(err)
+                    return
+            for label in labels:
+                create_node(label)
+                print_success(f"  {label}")
+            return
 
-                    lineColor = COLORS["cyan"]
+        err = validate_label(arg)
+        if err:
+            print_error(err)
+            return
+        create_node(arg)
+        print_success(f"  {arg}")
 
-                # =========================
-                # FORMAT BARIS
-                # =========================
-                line = (
-                    f"{lineColor}"
-                    f"{i:{longestIndex}} "
-                    f"{f'({label1})':{longestName+2}} "
-                    f"{COLORS['magenta']}"
-                    "<--> "
-                    f"{lineColor}"
-                    f"{j:{longestIndex}} "
-                    f"{f'({label2})':{longestName+2}} "
-                    f"{COLORS['magenta']}"
-                    "= "
-                    f"{statusOrDistance}"
-                    f"{COLORS['reset']}"
-                )
+    def handle_add_command(parts):
+        if len(parts) != 4:
+            print_error(
+                "Invalid add command.",
+                usage="add <node1> <node2> <distance>",
+                examples=(
+                    "add 1 2 10\n"
+                    "add Jakarta Bekasi 10\n"
+                    'add "Jakarta Selatan" Bekasi 10'
+                ),
+            )
+            return
+        try:
+            distance = int(parts[3])
+        except ValueError:
+            print_error(
+                "Distance must be a number.",
+                usage="add <node1> <node2> <distance>",
+                examples="add 1 2 10",
+            )
+            return
+        if distance <= 0:
+            print_error("Distance must be greater than 0.")
+            return
 
-                print(line)
+        node1_val, node2_val = parts[1], parts[2]
+        id1, miss1 = try_resolve_node(node1_val)
+        id2, miss2 = try_resolve_node(node2_val)
+        missing = []
+        if miss1:
+            missing.append(miss1)
+        if miss2:
+            missing.append(miss2)
 
-        print(
-            f"\n{COLORS['bold']}"
-            f"{COLORS['cyan']}"
-            "==================================="
-            f"{COLORS['reset']}"
-        )
+        if missing:
+            unique_missing = list(dict.fromkeys(missing))
+            for name in unique_missing:
+                if name.isdigit():
+                    print_error(f"Node {name} does not exist.")
+                    return
+                err = validate_label(name)
+                if err:
+                    print_error(err)
+                    return
+            if not confirm(
+                [
+                    "The following nodes do not exist:",
+                    "",
+                    *[f"  {name}" for name in unique_missing],
+                    "",
+                    "Create them automatically?",
+                ],
+                default_yes=False,
+            ):
+                print_info("Cancelled.")
+                return
+            for name in unique_missing:
+                if try_resolve_node(name)[0] is None:
+                    create_node(name)
+            id1, _ = try_resolve_node(node1_val)
+            id2, _ = try_resolve_node(node2_val)
 
-        return
+        if id1 is None or id2 is None:
+            return
+        if id1 == id2:
+            print_error("Nodes cannot be the same.")
+            return
+        create_path(id1, id2, distance)
 
-        for i in range(1, total_node + 1):
-            for j in range(i + 1, total_node + 1):
-                edge = (i, j)
-                label1, label2 = node_labels[i], node_labels[j]
+    def handle_edit_command(parts):
+        if len(parts) != 4:
+            print_error(
+                "Invalid edit command.",
+                usage="edit <node1> <node2> <distance>",
+                examples=(
+                    "edit 1 2 20\n"
+                    "edit Jakarta Bekasi 20"
+                ),
+            )
+            return
+        try:
+            distance = int(parts[3])
+        except ValueError:
+            print_error(
+                "Distance must be a number.",
+                usage="edit <node1> <node2> <distance>",
+                examples="edit 1 2 20",
+            )
+            return
+        if distance <= 0:
+            print_error("Distance must be greater than 0.")
+            return
+        try:
+            node1_id = resolve_node(parts[1])
+            node2_id = resolve_node(parts[2])
+        except ValueError as exc:
+            print_error(str(exc))
+            return
+        if node1_id == node2_id:
+            print_error("Nodes cannot be the same.")
+            return
+        edit_path(node1_id, node2_id, distance)
 
-                # Typo fix: "AVAILABLE" (huruf A kurang satu)
-                statusOrDistance = "AVAILABLE" if edge not in used_paths else used_paths[edge]
-
-                # PERBAIKAN 2: Berikan format rata kiri :{longestName+2} pada label kedua juga
-                print(
-                    f"{i:{longestIndex}} {f'({label1})':{longestName+2}} <--> "
-                    f"{j:{longestIndex}} {f'({label2})':{longestName+2}} = {statusOrDistance}"
-                )
+    def handle_remove_command(parts):
+        if len(parts) != 3:
+            print_error(
+                "Invalid remove command.",
+                usage="remove <node1> <node2>",
+                examples=(
+                    "remove 1 2\n"
+                    "remove Jakarta Bekasi"
+                ),
+            )
+            return
+        try:
+            node1_id = resolve_node(parts[1])
+            node2_id = resolve_node(parts[2])
+        except ValueError as exc:
+            print_error(str(exc))
+            return
+        if node1_id == node2_id:
+            print_error("Nodes cannot be the same.")
+            return
+        remove_path(node1_id, node2_id)
 
     clear_screen()
     show_help()
 
     while True:
-        _input_cmd = input("\nCommand: ")
-        parts = _input_cmd.strip().split()
+        command = input("\nCommand: ").strip()
+        if not command:
+            continue
+
+        try:
+            parts = shlex.split(command)
+        except ValueError as exc:
+            print_error(f"Invalid command syntax: {exc}")
+            continue
+
         if not parts:
             continue
 
@@ -334,242 +721,56 @@ def input_custom_data():
             clear_screen()
             show_help()
             continue
-            
+
         if action == "title":
-            ...
             if len(parts) < 2:
-                ...
-                print("Berikan title nya")
+                print_error(
+                    "Graph title is required.",
+                    usage="title <graph title>",
+                    examples='title Kabel Internet Antar Daerah',
+                )
                 continue
-
-            _prev = _graph_title
+            prev = _graph_title
             _graph_title = " ".join(parts[1:])
-            _log_update(_prev, _graph_title, "Title")
-
+            _log_update(prev, _graph_title, "Title")
             continue
 
         if action == "show":
             show_paths()
             continue
 
-        if action == "name":
-            if len(parts) < 3:
-                print("Format: name <no> <nama>")
-                continue
-            try:
-                idx = int(parts[1])
-                if idx < 1 or idx > total_node:
-                    print(f"Node hanya boleh 1 - {total_node}")
-                    continue
-                
-                name = " ".join(parts[2:])
-                _prev = node_labels[idx]
-                node_labels[idx] = name
-                _log_update(_prev, name, f"Node {idx}")
-            except ValueError:
-                print("Nomor node harus angka")
+        if action == "node":
+            handle_node_command(parts)
             continue
 
         if action == "done":
+            if node_count() < 2:
+                print_warning("At least 2 nodes are required.")
+                continue
             if len(used_paths) < minimal_path():
-                print(
-                    f"Minimal path belum terpenuhi. "
-                    f"Minimal: {minimal_path()}"
+                print_warning(
+                    f"Minimum paths not met. Required: {minimal_path()}"
                 )
                 continue
-            print("Input selesai")
+            print_success("Input complete.")
             break
 
         if action == "add":
-            if len(parts) != 4:
-                print("Format: add <node1> <node2> <distance>")
-                continue
-            try:
-                node1, node2, distance = (
-                    int(parts[1]),
-                    int(parts[2]),
-                    int(parts[3]),  
-                )
-                if not (1 <= node1 <= total_node and 1 <= node2 <= total_node):
-                    print(f"Node hanya boleh 1 - {total_node}")
-                    continue
-                if node1 == node2:
-                    print("Node tidak boleh sama")
-                    continue
-                if distance <= 0:
-                    print("Distance harus > 0")
-                    continue
-                edge = tuple(sorted((node1, node2)))
-                if edge in used_paths:
-                    print("Path sudah diregistrasi")
-                    continue
-                used_paths[edge] = distance
-                Path(nodes[node1 - 1], nodes[node2 - 1], distance)
-                print("Path berhasil ditambahkan")
-            except ValueError:
-                print("Input harus angka")
+            handle_add_command(parts)
             continue
 
         if action == "edit":
-
-            if len(parts) != 4:
-                print(
-                    "Format: edit "
-                    "<node1> <node2> <distance>"
-                )
-                continue
-
-            try:
-                node1 = int(parts[1])
-                node2 = int(parts[2])
-                distance = int(parts[3])
-
-                # =========================
-                # VALIDASI NODE
-                # =========================
-                if not (
-                    1 <= node1 <= total_node
-                    and
-                    1 <= node2 <= total_node
-                ):
-                    print(
-                        f"Node hanya boleh "
-                        f"1 - {total_node}"
-                    )
-                    continue
-
-                # =========================
-                # VALIDASI SELF LOOP
-                # =========================
-                if node1 == node2:
-                    print(
-                        "Node tidak boleh sama"
-                    )
-                    continue
-
-                # =========================
-                # VALIDASI DISTANCE
-                # =========================
-                if distance <= 0:
-                    print(
-                        "Distance harus > 0"
-                    )
-                    continue
-
-                edge = tuple(
-                    sorted((node1, node2))
-                )
-
-                # =========================
-                # VALIDASI EXIST
-                # =========================
-                if edge not in used_paths:
-                    print(
-                        "Path belum diregistrasi"
-                    )
-                    continue
-
-                # =========================
-                # UPDATE USED PATH
-                # =========================
-                used_paths[edge] = distance
-
-                # =========================
-                # UPDATE PATH OBJECT
-                # =========================
-                for path_obj in Path._self_map.values():
-
-                    current_edge = tuple(
-                        sorted(path_obj._path)
-                    )
-
-                    if current_edge == edge:
-                        path_obj.distance = distance
-                        break
-
-                print("Path berhasil diupdate")
-
-            except ValueError:
-                print("Input harus angka")
-
+            handle_edit_command(parts)
             continue
-        
+
         if action == "remove":
-
-            if len(parts) != 3:
-                print(
-                    "Format: remove <node1> <node2>"
-                )
-                continue
-
-            try:
-                node1 = int(parts[1])
-                node2 = int(parts[2])
-
-                # =========================
-                # VALIDASI NODE
-                # =========================
-                if not (
-                    1 <= node1 <= total_node
-                    and
-                    1 <= node2 <= total_node
-                ):
-                    print(
-                        f"Node hanya boleh "
-                        f"1 - {total_node}"
-                    )
-                    continue
-
-                # =========================
-                # VALIDASI SELF LOOP
-                # =========================
-                if node1 == node2:
-                    print(
-                        "Node tidak boleh sama"
-                    )
-                    continue
-
-                edge = tuple(
-                    sorted((node1, node2))
-                )
-
-                # =========================
-                # VALIDASI EXIST
-                # =========================
-                if edge not in used_paths:
-                    print(
-                        "Path belum diregistrasi"
-                    )
-                    continue
-
-                # =========================
-                # REMOVE PATH
-                # =========================
-                del used_paths[edge]
-
-                target_path_id = None
-
-                for path_id, path_obj in Path._self_map.items():
-
-                    current_edge = tuple(
-                        sorted(path_obj._path)
-                    )
-
-                    if current_edge == edge:
-                        target_path_id = path_id
-                        break
-
-                if target_path_id:
-                    del Path._self_map[target_path_id]
-
-                print("Path berhasil dihapus")
-
-            except ValueError:
-                print("Input harus angka")
-
+            handle_remove_command(parts)
             continue
 
-        print("Command tidak dikenali. Ketik 'help' untuk bantuan.")
+        print_error(
+            "Unknown command.",
+            usage="Type 'help' for available commands.",
+        )
 
 def kruskal():
     parent = {}
