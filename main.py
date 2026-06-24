@@ -3,6 +3,10 @@ import shlex
 
 import networkx as nx
 import matplotlib.pyplot as plt
+import time
+
+DEFAULT_DELAY_LOOP_IN_MS = .1
+
 _graph_title = "Kabel Internet Antar Daerah"
 
 COLORS = {
@@ -288,11 +292,12 @@ def input_custom_data():
         if not node_labels:
             print_info("  (no nodes)")
         else:
+            longest_id = get_longest_node_id()
             for node_id in sorted(node_labels):
                 label = node_labels[node_id]
                 color = COLORS["green"] if label else COLORS["yellow"]
                 print(
-                    f"  {node_id} "
+                    f"  {node_id:{longest_id}} "
                     f"{color}{display_name(node_id)}{COLORS['reset']}"
                 )
         print("===================================")
@@ -301,6 +306,9 @@ def input_custom_data():
         if not node_labels:
             return 0
         return max(len(display_name(node_id)) for node_id in node_labels)
+    
+    def get_longest_node_id():
+        return len(str(max(node_labels)))
 
     def node_count():
         return len(node_labels)
@@ -558,8 +566,11 @@ def input_custom_data():
                     print_error(err)
                     return
             for label in labels:
-                create_node(label)
-                print_success(f"  {label}")
+                time.sleep(DEFAULT_DELAY_LOOP_IN_MS)
+                id = create_node(label)
+                if id:
+                  print(f"{   COLORS['cyan']}[{id}] {COLORS['green']}{label}{COLORS['reset']}")
+                # print_success(f"  {label}")
             return
 
         err = validate_label(arg)
