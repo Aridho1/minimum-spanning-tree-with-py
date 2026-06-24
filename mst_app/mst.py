@@ -28,6 +28,7 @@ def kruskal():
     mst = []
     total_distance = 0
     sorted_paths = Path.get_sorted_paths()
+    steps = []
 
     print("\n=== PROSES KRUSKAL ===\n")
 
@@ -43,9 +44,19 @@ def kruskal():
         if union(node1, node2):
             mst.append(path)
             total_distance += path.distance
+            accepted = True
             print("Ditambahkan ke MST\n")
         else:
+            accepted = False
             print("Ditolak karena membentuk cycle\n")
+
+        steps.append(
+            {
+                "path": path,
+                "accepted": accepted,
+                "mst_snapshot": list(mst),
+            }
+        )
 
     print("\n=== HASIL MST ===\n")
 
@@ -58,7 +69,7 @@ def kruskal():
 
     print(f"\nTotal Minimum Distance = {total_distance}")
 
-    return mst
+    return mst, steps
 
 
 def draw_graph2(mst_paths):
@@ -108,4 +119,3 @@ def draw_graph2(mst_paths):
         f"Minimum Spanning Tree"
         f"{f' - {graph_title}' if graph_title else ''}"
     )
-
