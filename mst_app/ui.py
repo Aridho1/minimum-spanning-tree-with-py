@@ -30,13 +30,24 @@ COLORS = {
     "bg_bright_white": "\033[107m",
 }
 
+THEME = {
+    "primary": COLORS["green"],
+    "secondary": COLORS["magenta"],
+    "accent": COLORS["blue"],
+    "info": COLORS["cyan"],
+    "warning": COLORS["yellow"],
+    "error": COLORS["red"],
+    "muted": COLORS["white"],
+    "success": COLORS["green"],
+}
+
 
 def clear_screen():
     os.system("cls" if os.name == "nt" else "clear")
 
 
 def print_error(title, usage=None, examples=None):
-    print(f"{COLORS['red']}{title}{COLORS['reset']}")
+    print(f"{THEME['error']}{title}{COLORS['reset']}")
     if usage:
         print(f"\n{COLORS['bold']}Usage:{COLORS['reset']}\n")
         print(usage)
@@ -46,19 +57,19 @@ def print_error(title, usage=None, examples=None):
 
 
 def print_success(message):
-    print(f"{COLORS['green']}{message}{COLORS['reset']}")
+    print(f"{THEME['success']}{message}{COLORS['reset']}")
 
 
 def print_warning(message):
-    print(f"{COLORS['yellow']}{message}{COLORS['reset']}")
+    print(f"{THEME['warning']}{message}{COLORS['reset']}")
 
 
 def print_info(message):
-    print(f"{COLORS['cyan']}{message}{COLORS['reset']}")
+    print(f"{THEME['info']}{message}{COLORS['reset']}")
 
 
 def confirm(prompt_lines, default_yes=False):
-    color = COLORS["cyan"] if default_yes else COLORS["yellow"]
+    color = THEME["info"] if default_yes else THEME["warning"]
     suffix = "[Y/n]" if default_yes else "[y/N]"
     for line in prompt_lines:
         print(line)
@@ -66,4 +77,3 @@ def confirm(prompt_lines, default_yes=False):
     if not answer:
         return default_yes
     return answer in ("y", "yes")
-

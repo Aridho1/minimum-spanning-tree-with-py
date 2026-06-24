@@ -4,6 +4,7 @@ import time
 from .graph_data import Node, Path, get_graph_title, set_graph_title
 from .ui import (
     COLORS,
+    THEME,
     clear_screen,
     confirm,
     print_error,
@@ -13,15 +14,42 @@ from .ui import (
 )
 
 DEFAULT_DELAY_LOOP_IN_MS = 0.1
+SECTION_WIDTH = 60
 
 
 def input_custom_data():
     node_labels = {}
     used_paths = {}
 
+    def rule(char="=", color_key="secondary"):
+        return f"{THEME[color_key]}{char * SECTION_WIDTH}{COLORS['reset']}"
+
+    def section(title, subtitle=None):
+        print(f"\n{rule()}")
+        print(f"{COLORS['bold']}{THEME['primary']}{title}{COLORS['reset']}")
+        if subtitle:
+            print(f"{THEME['muted']}{subtitle}{COLORS['reset']}")
+        print(rule())
+
+    def prompt():
+        return (
+            f"\n{THEME['primary']}mst-cli"
+            f"{COLORS['reset']} "
+            f"{THEME['secondary']}>{COLORS['reset']} "
+        )
+
+    def hint(message):
+        print(f"{THEME['muted']}Hint: {message}{COLORS['reset']}")
+
+    def badge(label, color_key="info"):
+        return f"{THEME[color_key]}[{label}]{COLORS['reset']}"
+
     def display_name(node_id):
         label = node_labels.get(node_id, "")
         return label if label else f"Node {node_id}"
+
+    def display_node(node_id):
+        return f"{badge(node_id, 'accent')} {display_name(node_id)}"
 
     def find_node_by_label(label):
         label_lower = label.lower()
@@ -110,7 +138,7 @@ def input_custom_data():
         if current:
             if not confirm(
                 [
-                    f"Node {node_id} is currently named:",
+                    f"{display_node(node_id)} is currently named:",
                     "",
                     f"  {current}",
                     "",
@@ -122,7 +150,7 @@ def input_custom_data():
             ):
                 return
         node_labels[node_id] = label
-        print_success(f"Node {node_id} renamed to '{label}'.")
+        print_success(f"{badge('OK', 'success')} {display_node(node_id)} renamed to '{label}'.")
 
     def create_path(node1_id, node2_id, distance):
         edge = tuple(sorted((node1_id, node2_id)))
@@ -131,7 +159,10 @@ def input_custom_data():
             return False
         used_paths[edge] = distance
         Path(Node._self_map[node1_id], Node._self_map[node2_id], distance)
-        print_success("Path added successfully.")
+        print_success(
+            f"{badge('ADD', 'success')} {display_name(node1_id)} <--> "
+            f"{display_name(node2_id)} = {distance}"
+        )
         return True
 
     def edit_path(node1_id, node2_id, distance):
@@ -144,7 +175,10 @@ def input_custom_data():
             if tuple(sorted(path_obj._path)) == edge:
                 path_obj.distance = distance
                 break
-        print_success("Path updated successfully.")
+        print_success(
+            f"{badge('EDIT', 'success')} {display_name(node1_id)} <--> "
+            f"{display_name(node2_id)} = {distance}"
+        )
         return True
 
     def remove_path(node1_id, node2_id):
@@ -160,25 +194,27 @@ def input_custom_data():
                 break
         if target_path_id:
             del Path._self_map[target_path_id]
-        print_success("Path removed successfully.")
+        print_success(
+            f"{badge('DEL', 'success')} Removed path "
+            f"{display_name(node1_id)} <--> {display_name(node2_id)}"
+        )
         return True
 
     def show_node_list():
-        print("\n===================================")
-        print("NODE LIST")
-        print("===================================")
+        section("NODE LIST", "Registered nodes and current labels.")
         if not node_labels:
-            print_info("  (no nodes)")
-        else:
-            longest_id = get_longest_node_id()
-            for node_id in sorted(node_labels):
-                label = node_labels[node_id]
-                color = COLORS["green"] if label else COLORS["yellow"]
-                print(
-                    f"  {node_id:{longest_id}} "
-                    f"{color}{display_name(node_id)}{COLORS['reset']}"
-                )
-        print("===================================")
+            print_info("No nodes have been created yet.")
+            hint("Use 'node 5' or 'node Jakarta,Bandung' to start.")
+            return
+
+        longest_id = get_longest_node_id()
+        for node_id in sorted(node_labels):
+            label = node_labels[node_id]
+            color = THEME["primary"] if label else THEME["warning"]
+            print(
+                f"  {badge(f'{node_id:{longest_id}}', 'accent')} "
+                f"{color}{display_name(node_id)}{COLORS['reset']}"
+            )
 
     def get_longest_node_labels():
         if not node_labels:
@@ -200,48 +236,45 @@ def input_custom_data():
         return max(0, total - 1) if total >= 2 else 0
 
     def log_update(previous, current, label=""):
-        print(
-            ("", f"[{label}]")[bool(label)],
-            (
-                f"'{previous}' updated to '{current}'"
-                if previous != current
-                else f"'{current}' is already in use"
-            ),
-        )
+        tag = badge(label or "INFO", "info")
+        if previous != current:
+            print_success(f"{tag} '{previous}' updated to '{current}'")
+        else:
+            print_info(f"{tag} '{current}' is already in use")
 
     def show_help():
-        print("\n===================================")
-        print("HELP / STATUS")
-        print("===================================")
-        print(f"Node count       : {node_count()}")
-        print(f"Min paths        : {minimal_path()}")
-        print(f"Registered paths : {len(used_paths)} / {maksimal_path()}")
-        print("\n--- Commands ---")
-        print("  help")
-        print("  clear")
-        print("  show")
-        print("  title <graph title>")
-        print("  node list")
-        print("  node <count>")
-        print("  node <label>")
-        print("  node <label1,label2,...>")
-        print("  node <count> <label1,label2,...>")
-        print("  node name <id> <label>")
-        print("  node remove <id>")
-        print("  node remove <id1,id2,...>")
-        print("  add <node1> <node2> <distance>")
-        print("  edit <node1> <node2> <distance>")
-        print("  remove <node1> <node2>")
-        print("  done")
-        print("===================================")
+        section("HELP / STATUS", "Interactive CRUD for MST graph input.")
+        print(f"Graph title      : {THEME['primary']}{get_graph_title()}{COLORS['reset']}")
+        print(f"Node count       : {THEME['info']}{node_count()}{COLORS['reset']}")
+        print(f"Min paths        : {THEME['info']}{minimal_path()}{COLORS['reset']}")
+        print(
+            f"Registered paths : {THEME['info']}{len(used_paths)}"
+            f"{COLORS['reset']} / {THEME['muted']}{maksimal_path()}{COLORS['reset']}"
+        )
+        print(f"\n{COLORS['bold']}{THEME['secondary']}Commands{COLORS['reset']}")
+        print(f"  {badge('help')} Show command summary and status")
+        print(f"  {badge('clear')} Clear screen and redraw help")
+        print(f"  {badge('show')} Show all possible paths and availability")
+        print(f"  {badge('title <graph title>')} Rename graph title")
+        print(f"  {badge('node list')} Show current node list")
+        print(f"  {badge('node <count>')} Create unnamed nodes")
+        print(f"  {badge('node <label>')} Create one named node")
+        print(f"  {badge('node <label1,label2,...>')} Create multiple named nodes")
+        print(f"  {badge('node <count> <label1,label2,...>')} Create many nodes with labels")
+        print(f"  {badge('node name <id> <label>')} Rename a node")
+        print(f"  {badge('node remove <id>')} Delete one node")
+        print(f"  {badge('node remove <id1,id2,...>')} Delete multiple nodes")
+        print(f"  {badge('add <node1> <node2> <distance>')} Create a path")
+        print(f"  {badge('edit <node1> <node2> <distance>')} Update a path distance")
+        print(f"  {badge('remove <node1> <node2>')} Delete a path")
+        print(f"  {badge('done')} Finish input and run MST")
+        hint("Use quotes for names with spaces, for example: node \"Jakarta Selatan\"")
 
     def show_paths():
-        print("\n===================================")
-        print("PATH LIST")
-        print("===================================")
+        section("PATH LIST", "All node pairs and whether a path is already registered.")
         if node_count() < 2:
-            print_info("  (need at least 2 nodes)")
-            print("===================================")
+            print_info("At least 2 nodes are needed before paths can be inspected.")
+            hint("Create nodes first, then use 'show' again.")
             return
 
         longest_name = get_longest_node_labels()
@@ -258,30 +291,24 @@ def input_custom_data():
                 is_available = edge not in used_paths
 
                 if is_available:
-                    status_or_distance = (
-                        f"{COLORS['yellow']}AVAILABLE{COLORS['reset']}"
-                    )
-                    node_index_color = COLORS["blue"]
-                    node_label_color = COLORS["cyan"]
+                    status_or_distance = f"{THEME['warning']}AVAILABLE{COLORS['reset']}"
+                    node_index_color = THEME["accent"]
+                    node_label_color = THEME["info"]
                 else:
                     distance = used_paths[edge]
-                    status_or_distance = (
-                        f"{COLORS['green']}{distance}{COLORS['reset']}"
-                    )
-                    node_index_color = COLORS["magenta"]
-                    node_label_color = COLORS["cyan"]
+                    status_or_distance = f"{THEME['primary']}{distance}{COLORS['reset']}"
+                    node_index_color = THEME["secondary"]
+                    node_label_color = THEME["info"]
 
                 line = (
                     f"{node_index_color}{i:{longest_index}} "
                     f"{node_label_color}{f'({label1})':{longest_name + 2}} "
-                    f"{COLORS['magenta']}<--> "
+                    f"{THEME['secondary']}<--> "
                     f"{node_index_color}{j:{longest_index}} "
                     f"{node_label_color}{f'({label2})':{longest_name + 2}} "
-                    f"{COLORS['magenta']}= {status_or_distance}{COLORS['reset']}"
+                    f"{THEME['secondary']}= {status_or_distance}{COLORS['reset']}"
                 )
                 print(line)
-
-        print(f"{COLORS['reset']}===================================")
 
     def handle_node_command(parts):
         if len(parts) < 2:
@@ -341,7 +368,7 @@ def input_custom_data():
                 [
                     "The following nodes will be removed:",
                     "",
-                    *[f"  {node_id}" for node_id in node_ids],
+                    *[f"  {display_node(node_id)}" for node_id in node_ids],
                     "",
                     "All connected paths will also be removed.",
                 ],
@@ -350,7 +377,7 @@ def input_custom_data():
                 print_info("Cancelled.")
                 return
             remove_nodes(node_ids)
-            print_success("Node(s) removed successfully.")
+            print_success(f"{badge('DEL', 'success')} Node(s) removed successfully.")
             return
 
         if sub == "name":
@@ -401,8 +428,7 @@ def input_custom_data():
                     detail = f"Only the first {count} names will be used."
                 if not confirm(
                     [
-                        f"Name count ({len(labels)}) does not match "
-                        f"requested node count ({count}).",
+                        f"Name count ({len(labels)}) does not match requested node count ({count}).",
                         "",
                         detail,
                     ],
@@ -415,8 +441,9 @@ def input_custom_data():
             node_ids = sorted(node_labels)[-count:]
             for node_id, label in zip(node_ids, labels):
                 node_labels[node_id] = label
+            print_success(f"{badge('ADD', 'success')} Added {count} node(s).")
             for node_id in node_ids:
-                print_success(f"  {display_name(node_id)}")
+                print(f"  {display_node(node_id)}")
             return
 
         if arg.isdigit():
@@ -425,8 +452,9 @@ def input_custom_data():
                 print_error("Node count must be greater than 0.")
                 return
             create_nodes_count(count)
+            print_success(f"{badge('ADD', 'success')} Added {count} node(s).")
             for node_id in sorted(node_labels)[-count:]:
-                print_success(f"  {display_name(node_id)}")
+                print(f"  {display_node(node_id)}")
             return
 
         if "," in arg:
@@ -436,22 +464,20 @@ def input_custom_data():
                 if err:
                     print_error(err)
                     return
+            print_info(f"Creating {len(labels)} node(s)...")
             for label in labels:
                 time.sleep(DEFAULT_DELAY_LOOP_IN_MS)
                 node_id = create_node(label)
                 if node_id:
-                    print(
-                        f"{COLORS['cyan']}[{node_id}] "
-                        f"{COLORS['green']}{label}{COLORS['reset']}"
-                    )
+                    print(f"  {badge(node_id, 'accent')} {THEME['primary']}{label}{COLORS['reset']}")
             return
 
         err = validate_label(arg)
         if err:
             print_error(err)
             return
-        create_node(arg)
-        print_success(f"  {arg}")
+        node_id = create_node(arg)
+        print_success(f"{badge('ADD', 'success')} {display_node(node_id)}")
 
     def handle_add_command(parts):
         if len(parts) != 4:
@@ -512,6 +538,7 @@ def input_custom_data():
             for name in unique_missing:
                 if try_resolve_node(name)[0] is None:
                     create_node(name)
+                    print_info(f"Auto-created node '{name}'.")
             id1, _ = try_resolve_node(node1_val)
             id2, _ = try_resolve_node(node2_val)
 
@@ -573,17 +600,21 @@ def input_custom_data():
         remove_path(node1_id, node2_id)
 
     clear_screen()
+    section("CUSTOM MST INPUT", "Build your graph with terminal CRUD commands.")
+    hint("Type 'help' to see all commands. Type 'done' when minimum paths are satisfied.")
     show_help()
 
     while True:
-        command = input("\nCommand: ").strip()
+        command = input(prompt()).strip()
         if not command:
+            hint("No command entered. Type 'help' if you need guidance.")
             continue
 
         try:
             parts = shlex.split(command)
         except ValueError as exc:
             print_error(f"Invalid command syntax: {exc}")
+            hint("Check quotes and spacing, then try again.")
             continue
 
         if not parts:
@@ -609,7 +640,7 @@ def input_custom_data():
                 )
                 continue
             previous = set_graph_title(" ".join(parts[1:]))
-            log_update(previous, get_graph_title(), "Title")
+            log_update(previous, get_graph_title(), "TITLE")
             continue
 
         if action == "show":
@@ -623,11 +654,13 @@ def input_custom_data():
         if action == "done":
             if node_count() < 2:
                 print_warning("At least 2 nodes are required.")
+                hint("Add more nodes before finishing.")
                 continue
             if len(used_paths) < minimal_path():
                 print_warning(f"Minimum paths not met. Required: {minimal_path()}")
+                hint("Add more paths until the graph can connect all nodes.")
                 continue
-            print_success("Input complete.")
+            print_success(f"{badge('OK', 'success')} Input complete.")
             break
 
         if action == "add":
@@ -643,4 +676,5 @@ def input_custom_data():
             continue
 
         print_error("Unknown command.", usage="Type 'help' for available commands.")
+        hint("Command names are: help, clear, show, title, node, add, edit, remove, done.")
 
