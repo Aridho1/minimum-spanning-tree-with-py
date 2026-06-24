@@ -3,17 +3,8 @@ import time
 from .ui import confirm, print_error, print_info, print_success
 
 
-def handle_node_command(parts, deps):
-    view = deps["view"]
-    node_labels = deps["node_labels"]
-    validate_label = deps["validate_label"]
-    create_nodes_count = deps["create_nodes_count"]
-    create_node = deps["create_node"]
-    display_node = deps["display_node"]
-    display_name = deps["display_name"]
-    set_node_name = deps["set_node_name"]
-    remove_nodes = deps["remove_nodes"]
-    delay = deps["delay"]
+def handle_node_command(parts, session, delay):
+    view = session.view
 
     if len(parts) < 2:
         print_error(
@@ -46,7 +37,7 @@ def handle_node_command(parts, deps):
     sub = parts[1].lower()
 
     if sub == "list":
-        deps["show_node_list"]()
+        session.show_node_list()
         return
 
     if sub == "remove":
@@ -64,7 +55,7 @@ def handle_node_command(parts, deps):
                 print_error(f"Invalid node ID: {raw}")
                 return
             node_id = int(raw)
-            if node_id not in node_labels:
+            if node_id not in session.node_labels:
                 print_error(f"Node {node_id} does not exist.")
                 return
             node_ids.append(node_id)
@@ -72,7 +63,7 @@ def handle_node_command(parts, deps):
             [
                 "The following nodes will be removed:",
                 "",
-                *[f"  {display_node(node_id)}" for node_id in node_ids],
+                *[f"  {session.display_node(node_id)}" for node_id in node_ids],
                 "",
                 "All connected paths will also be removed.",
             ],
@@ -80,7 +71,7 @@ def handle_node_command(parts, deps):
         ):
             print_info("Cancelled.")
             return
-        remove_nodes(node_ids)
+        session.remove_nodes(node_ids)
         print_success(f"{view.badge('DEL', 'success')} Node(s) removed successfully.")
         return
 
@@ -100,7 +91,7 @@ def handle_node_command(parts, deps):
             return
         node_id = int(parts[2])
         label = " ".join(parts[3:])
-        set_node_name(node_id, label)
+        session.set_node_name(node_id, label)
         return
 
     arg = parts[1]
@@ -120,7 +111,7 @@ def handle_node_command(parts, deps):
             return
         labels = [label.strip() for label in labels_part.split(",") if label.strip()]
         for label in labels:
-            err = validate_label(label)
+            err = session.validate_label(label)
             if err:
                 print_error(err)
                 return
@@ -141,13 +132,13 @@ def handle_node_command(parts, deps):
                 print_info("Cancelled.")
                 return
             labels = labels[:count]
-        create_nodes_count(count)
-        node_ids = sorted(node_labels)[-count:]
+        session.create_nodes_count(count)
+        node_ids = sorted(session.node_labels)[-count:]
         for node_id, label in zip(node_ids, labels):
-            node_labels[node_id] = label
+            session.node_labels[node_id] = label
         print_success(f"{view.badge('ADD', 'success')} Added {count} node(s).")
         for node_id in node_ids:
-            print(f"  {display_node(node_id)}")
+            print(f"  {session.display_node(node_id)}")
         return
 
     if arg.isdigit():
@@ -155,31 +146,31 @@ def handle_node_command(parts, deps):
         if count <= 0:
             print_error("Node count must be greater than 0.")
             return
-        create_nodes_count(count)
+        session.create_nodes_count(count)
         print_success(f"{view.badge('ADD', 'success')} Added {count} node(s).")
-        for node_id in sorted(node_labels)[-count:]:
-            print(f"  {display_node(node_id)}")
+        for node_id in sorted(session.node_labels)[-count:]:
+            print(f"  {session.display_node(node_id)}")
         return
 
     if "," in arg:
         labels = [label.strip() for label in arg.split(",") if label.strip()]
         for label in labels:
-            err = validate_label(label)
+            err = session.validate_label(label)
             if err:
                 print_error(err)
                 return
         print_info(f"Creating {len(labels)} node(s)...")
         for label in labels:
             time.sleep(delay)
-            node_id = create_node(label)
+            node_id = session.create_node(label)
             if node_id:
-                print(f"  {view.badge(node_id, 'accent')} {display_name(node_id)}")
+                print(f"  {view.badge(node_id, 'accent')} {session.display_name(node_id)}")
         return
 
-    err = validate_label(arg)
+    err = session.validate_label(arg)
     if err:
         print_error(err)
         return
-    node_id = create_node(arg)
-    print_success(f"{view.badge('ADD', 'success')} {display_node(node_id)}")
+    node_id = session.create_node(arg)
+    print_success(f"{view.badge('ADD', 'success')} {session.display_node(node_id)}")
 
