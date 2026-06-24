@@ -56,7 +56,7 @@ def load_default_data():
     Path(node1, node4, 7)
     Path(node2, node3, 6)
     Path(node2, node5, 5)
-    Path(node4, node3, 9)
-    Path(node4, node5, 9)
+    Path(node3, node4, 4)
     Path(node3, node5, 8)
+    Path(node4, node5, 9)
 
