@@ -195,6 +195,33 @@ class GraphSession:
             if node_id not in connected
         ]
 
+    def get_connected_components(self):
+        remaining = set(self.node_labels)
+        adjacency = {node_id: set() for node_id in self.node_labels}
+
+        for node1_id, node2_id in self.used_paths:
+            adjacency[node1_id].add(node2_id)
+            adjacency[node2_id].add(node1_id)
+
+        components = []
+
+        while remaining:
+            start = remaining.pop()
+            stack = [start]
+            component = [start]
+
+            while stack:
+                current = stack.pop()
+                for neighbor in adjacency[current]:
+                    if neighbor in remaining:
+                        remaining.remove(neighbor)
+                        stack.append(neighbor)
+                        component.append(neighbor)
+
+            components.append(sorted(component))
+
+        return sorted(components, key=lambda component: component[0])
+
     def show_node_list(self):
         rendered = self.view.show_node_list(self.node_labels, self.get_longest_node_id())
         if not rendered:

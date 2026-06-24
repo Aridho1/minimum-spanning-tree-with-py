@@ -99,6 +99,18 @@ def input_custom_data():
                     print(f"  {session.display_node(node_id)}")
                 view.hint("Connect every node with at least one path before running MST.")
                 continue
+            components = session.get_connected_components()
+            if len(components) > 1:
+                print_warning("Cannot finish because the graph is still disconnected.")
+                print_info("Disconnected groups:")
+                for index, component in enumerate(components, start=1):
+                    members = ", ".join(
+                        session.display_name(node_id)
+                        for node_id in component
+                    )
+                    print(f"  Group {index}: {members}")
+                view.hint("Add paths that connect these groups into one network.")
+                continue
             print_success(f"{view.badge('OK', 'success')} Input complete.")
             break
 
