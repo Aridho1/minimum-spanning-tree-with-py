@@ -75,6 +75,7 @@ class CliView:
         print(f"  {self.badge('edit <node1> <node2> <distance>')} Update a path distance")
         print(f"  {self.badge('remove <node1> <node2>')} Delete a path")
         print(f"  {self.badge('done')} Finish input and run MST")
+        print(f"  {self.badge('exit')} Exit custom input")
         self.hint("Use quotes for names with spaces, for example: node \"Jakarta Selatan\"")
 
     def show_paths(self, node_labels, used_paths, longest_name, longest_index):
@@ -112,4 +113,3 @@ class CliView:
     def show_welcome(self):
         self.section("CUSTOM MST INPUT", "Build your graph with terminal CRUD commands.")
         self.hint("Type 'help' to see all commands. Type 'done' when minimum paths are satisfied.")
-

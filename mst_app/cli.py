@@ -5,7 +5,7 @@ from .graph_data import get_graph_title, set_graph_title
 from .graph_session import GraphSession
 from .node_cli import handle_node_command
 from .path_cli import handle_add_command, handle_edit_command, handle_remove_command
-from .ui import clear_screen, print_error, print_info, print_success, print_warning
+from .ui import clear_screen, confirm, print_error, print_info, print_success, print_warning
 
 DEFAULT_DELAY_LOOP_IN_MS = 0.1
 
@@ -91,8 +91,29 @@ def input_custom_data():
                 )
                 view.hint("Add more paths until the graph can connect all nodes.")
                 continue
+            isolated_nodes = session.get_isolated_nodes()
+            if isolated_nodes:
+                print_warning("Cannot finish while some nodes have no path at all.")
+                print_info("Isolated nodes:")
+                for node_id in isolated_nodes:
+                    print(f"  {session.display_node(node_id)}")
+                view.hint("Connect every node with at least one path before running MST.")
+                continue
             print_success(f"{view.badge('OK', 'success')} Input complete.")
             break
+
+        if action == "exit":
+            if confirm(
+                [
+                    "Exit custom input now?",
+                    "",
+                    "All current custom graph input will be discarded.",
+                ],
+                default_yes=False,
+            ):
+                raise SystemExit(0)
+            print_info("Exit cancelled.")
+            continue
 
         if action == "add":
             handle_add_command(parts, session)
@@ -107,5 +128,4 @@ def input_custom_data():
             continue
 
         print_error("Unknown command.", usage="Type 'help' for available commands.")
-        view.hint("Command names are: help, clear, show, title, node, add, edit, remove, done.")
-
+        view.hint("Command names are: help, clear, show, title, node, add, edit, remove, done, exit.")

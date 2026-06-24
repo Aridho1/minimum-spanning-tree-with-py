@@ -184,6 +184,17 @@ class GraphSession:
         total = self.node_count()
         return max(0, total - 1) if total >= 2 else 0
 
+    def get_isolated_nodes(self):
+        connected = set()
+        for node1_id, node2_id in self.used_paths:
+            connected.add(node1_id)
+            connected.add(node2_id)
+        return [
+            node_id
+            for node_id in sorted(self.node_labels)
+            if node_id not in connected
+        ]
+
     def show_node_list(self):
         rendered = self.view.show_node_list(self.node_labels, self.get_longest_node_id())
         if not rendered:
@@ -202,4 +213,3 @@ class GraphSession:
             self.get_longest_node_labels(),
             len(str(max(self.node_labels))),
         )
-
