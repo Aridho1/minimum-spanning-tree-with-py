@@ -4,44 +4,66 @@ Project Struktur Data menggunakan algoritma **Minimum Spanning Tree (MST)** deng
 
 > Pemasangan Kabel Internet Antar Daerah
 
-Program dibuat menggunakan Python dan menampilkan visualisasi graph menggunakan:
-
-- NetworkX
-- Matplotlib
+Program ini berjalan di terminal, mendukung input data default atau custom, validasi graph sebelum MST dijalankan, dan output visual menggunakan `Matplotlib` atau `Mermaid`.
 
 ---
 
 # Features
 
 - Implementasi algoritma Kruskal
-- Visualisasi graph
-- Highlight jalur MST
-- Jalur non-MST ditampilkan dashed
-- Input data custom via command line
+- CLI CRUD untuk node dan path
+- Data default untuk demo cepat
+- Input graph custom dari terminal
+- Rename node dan ubah judul graph
 - Validasi duplicate path
 - Validasi self-loop
-- Dynamic node naming
-- Interactive command system
-- Default demo graph
+- Validasi node terisolasi
+- Validasi graph terputus sebelum MST dijalankan
+- Visualisasi MST dengan `NetworkX` + `Matplotlib`
+- Export Mermaid flowchart via `mmdc`
+- Mode Mermaid:
+  - hasil MST saja
+  - seluruh proses Kruskal
 
 ---
 
-# Preview
+# Dependencies
 
-## Jalur MST
+## Python
 
-- Edge MST: solid
-- Edge non-MST: dashed
+Library Python yang dipakai:
 
-## Command System
+- `networkx`
+- `matplotlib`
+- `termaid`
 
-```text
-help
-show
-name 1 Jakarta
-add 1 2 10
-done
+Install dengan:
+
+```bash
+pip install networkx matplotlib termaid
 ```
+
+Catatan:
+
+- `termaid` saat ini belum menjadi renderer utama aplikasi, tetapi sudah menjadi dependency proyek terkait eksperimen Mermaid di terminal.
+
+## Node / Mermaid CLI
+
+Untuk export Mermaid menjadi SVG:
+
+- `@mermaid-js/mermaid-cli`
+- `npm`
+
+Install dengan:
+
+```bash
+npm install -g @mermaid-js/mermaid-cli
+```
+
+Catatan:
+
+- command yang digunakan aplikasi adalah `mmdc`
+- hasil Mermaid disimpan ke folder `result-mmdc`
 
 ---
 
@@ -54,10 +76,16 @@ git clone <repository-url>
 cd <repository-folder>
 ```
 
-## Install Dependency
+## Install Python Dependency
 
 ```bash
-pip install networkx matplotlib
+pip install networkx matplotlib termaid
+```
+
+## Install Mermaid CLI
+
+```bash
+npm install -g @mermaid-js/mermaid-cli
 ```
 
 ---
@@ -70,7 +98,41 @@ python main.py
 
 ---
 
-# Menu
+# App Flow
+
+Berikut flowchart singkat cara kerja aplikasi:
+
+```mermaid
+flowchart TD
+    A[Start App] --> B{Pilih Sumber Data}
+    B -->|1| C[Load Default Data]
+    B -->|2| D[Masuk ke CLI CRUD]
+
+    D --> E[Kelola Node dan Path]
+    E --> F{done?}
+    F -->|Belum| E
+    F -->|Ya| G{Validasi Graph}
+
+    G -->|Node < 2| E
+    G -->|Path < n-1| E
+    G -->|Ada node terisolasi| E
+    G -->|Graph terputus| E
+    G -->|Valid| H[Cetak Semua Path]
+
+    C --> H
+    H --> I[Jalankan Kruskal]
+    I --> J{Pilih Renderer}
+    J -->|1| K[Render dengan Matplotlib]
+    J -->|2| L{Mode Mermaid}
+    L -->|1| M[Generate MST Result]
+    L -->|2| N[Generate Full Kruskal Process]
+    M --> O[Export .mmdc dan .svg]
+    N --> O
+```
+
+---
+
+# Menu Awal
 
 Saat program dijalankan:
 
@@ -79,127 +141,121 @@ Saat program dijalankan:
 2. Input data sendiri
 ```
 
+Flow setelah MST selesai:
+
+```text
+1. Pyplot
+2. Mermaid / termaid
+```
+
+Jika memilih Mermaid:
+
+```text
+1. Hasil MST saja
+2. Seluruh proses Kruskal
+```
+
 ---
 
-# Custom Input System
+# Custom CLI Commands
 
-## Help
+Command utama pada mode custom input:
 
 ```text
 help
-```
-
-Menampilkan:
-
-- jumlah node
-- jumlah path
-- daftar node
-- daftar command
-
----
-
-## Show Path
-
-```text
+clear
 show
-```
-
-Menampilkan seluruh kemungkinan path.
-
-Contoh:
-
-```text
-1 (Jakarta) <--> 2 (Bandung) = 10
-1 (Jakarta) <--> 3 (Bekasi) = AVAILABLE
-```
-
-`AVAILABLE` berarti path belum diregistrasi.
-
----
-
-## Rename Node
-
-```text
-name <node> <label>
-```
-
-Contoh:
-
-```text
-name 1 Jakarta
-name 2 Bandung
-```
-
----
-
-## Add Path
-
-```text
+title <graph title>
+node list
+node <count>
+node <label>
+node <label1,label2,...>
+node <count> <label1,label2,...>
+node name <id> <label>
+node remove <id>
+node remove <id1,id2,...>
 add <node1> <node2> <distance>
+edit <node1> <node2> <distance>
+remove <node1> <node2>
+done
+exit
 ```
 
 Contoh:
 
 ```text
-add 1 2 10
-add 1 3 5
-```
-
----
-
-## Finish Input
-
-```text
+node 5
+node Jakarta,Bandung,Bekasi
+node name 4 Depok
+add Jakarta Bandung 10
+edit Jakarta Bandung 7
+show
 done
 ```
 
-Input hanya dapat selesai jika minimal path terpenuhi:
+Gunakan quote untuk label dengan spasi:
 
 ```text
-minimal path = total node - 1
+node "Jakarta Selatan"
+node name 3 "Jakarta Barat"
+add "Jakarta Selatan" Bekasi 12
 ```
 
 ---
 
-# Validation
+# Validation Rules
 
-Program memiliki beberapa validasi:
+Mode custom input memiliki validasi berikut:
 
-- Node minimal 2
-- Duplicate path tidak diperbolehkan
-- `1 2` dan `2 1` dianggap sama
-- Self-loop tidak diperbolehkan
-- Distance harus lebih besar dari 0
-- Minimal path harus terpenuhi
+- node minimal `2`
+- distance harus lebih besar dari `0`
+- duplicate path tidak diperbolehkan
+- `1 2` dan `2 1` dianggap path yang sama
+- self-loop tidak diperbolehkan
+- minimal path harus terpenuhi: `n - 1`
+- tidak boleh ada node tanpa path sama sekali
+- graph harus terhubung penuh sebelum `done`
+
+Artinya, `done` hanya akan berhasil jika MST benar-benar bisa mencakup seluruh node.
 
 ---
 
-# Graph Visualization
+# Visualization
 
-Visualisasi graph menggunakan:
+## Pyplot
+
+Renderer `Pyplot` menggunakan:
 
 - `NetworkX`
 - `Matplotlib`
 
-## Visual Rules
+Aturan visual:
 
-- MST Edge → solid line
-- Non-MST Edge → dashed gray line
+- edge MST: solid
+- edge non-MST: dashed gray
 
----
+## Mermaid
 
-# Algorithm
+Renderer `Mermaid` membuat file:
 
-Project menggunakan:
+- `result-mmdc/{timestamp}.mmdc`
+- `result-mmdc/{timestamp}.svg`
 
-## Kruskal Algorithm
+Mode Mermaid:
 
-Langkah:
+- `result`
+  - hanya graph hasil MST
+- `process`
+  - base graph
+  - sorted path
+  - step-by-step Kruskal
+  - step cycle diberi label `- CYCLE`
+  - step akhir MST diberi label `- MST`
 
-1. Urutkan edge berdasarkan distance
-2. Pilih edge terkecil
-3. Hindari cycle
-4. Ulangi sampai semua node terhubung
+Catatan:
+
+- fitur Mermaid saat ini masih dalam tahap pengembangan lanjutan
+- jika `mmdc` gagal, aplikasi akan menampilkan error render
 
 ---
 
@@ -208,13 +264,11 @@ Langkah:
 ## Input
 
 ```text
-name 1 Jakarta
-name 2 Bandung
-name 3 Bekasi
-
-add 1 2 10
-add 1 3 5
-add 2 3 7
+node 3 Jakarta,Bandung,Bekasi
+add Jakarta Bandung 10
+add Jakarta Bekasi 5
+add Bandung Bekasi 7
+done
 ```
 
 ## Output
@@ -225,14 +279,45 @@ Total Minimum Distance = 12
 
 ---
 
+# Project Structure
+
+Struktur utama proyek saat ini:
+
+```text
+main.py
+mst_app/
+  app.py
+  cli.py
+  cli_view.py
+  graph_data.py
+  graph_session.py
+  mst.py
+  mermaid_renderer.py
+  node_cli.py
+  path_cli.py
+  ui.py
+result-mmdc/
+```
+
+---
+
 # Technologies
 
 - Python
 - NetworkX
 - Matplotlib
+- Mermaid CLI (`mmdc`)
+- npm
+- termaid
+
+---
+
+# Anchor
+PPT: https://docs.google.com/presentation/d/1WiyUvd3JOPOmpz-lq5TqilmhV6dn6LU-6QE0d1QPBw8/edit?slide=id.p3#slide=id.p3
 
 ---
 
 # Author
 
 Project Struktur Data - Minimum Spanning Tree (MST)
+
